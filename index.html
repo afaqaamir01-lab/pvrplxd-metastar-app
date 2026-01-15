@@ -19,13 +19,17 @@
         body { 
             margin: 0; background: var(--bg-canvas); color: var(--text-main); 
             font-family: 'Space Grotesk', sans-serif; height: 100dvh; overflow: hidden; font-size: 13px; 
+            overscroll-behavior: none;
         }
 
         /* AUTH LAYER */
         #auth-layer { position: fixed; inset: 0; background: var(--bg-canvas); z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .auth-card { background: var(--bg-panel); padding: 40px; border: 1px solid #333; border-radius: 12px; width: 340px; text-align: center; }
-        .auth-input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; margin-bottom: 12px; text-align: center; font-size: 16px; }
-        .auth-btn { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; }
+        .auth-card { background: var(--bg-panel); padding: 40px; border: 1px solid #333; border-radius: 12px; width: 340px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .auth-input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; margin-bottom: 12px; text-align: center; font-size: 16px; letter-spacing: 1px; }
+        .auth-btn { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; transition: opacity 0.2s; }
+        .auth-btn:hover { opacity: 0.9; }
+        .auth-btn:disabled { opacity: 0.5; cursor: wait; }
+        .step-hidden { display: none; }
         
         /* APP UI */
         #main-ui { opacity: 0; transition: opacity 1s ease; pointer-events: none; width: 100%; height: 100%; display: flex; }
@@ -40,23 +44,24 @@
             border-bottom: 1px solid var(--border); display: flex; 
             justify-content: space-between; align-items: center; 
             background: var(--bg-panel); flex-shrink: 0;
-            border-radius: 24px 24px 0 0;
+            border-radius: 24px 24px 0 0; /* Only visible on mobile */
         }
 
         .sidebar-content {
             flex-grow: 1; overflow-y: auto; overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            padding-bottom: 40px;
         }
         
         #viewport { flex-grow: 1; position: relative; overflow: hidden; touch-action: none; background: var(--bg-canvas); }
         canvas { display: block; }
         
-        /* MOBILE BOTTOM BAR FIXES */
+        /* MOBILE BOTTOM SHEET & RESPONSIVENESS */
         @media (max-width: 768px) {
             #main-ui { flex-direction: column; }
             #sidebar { 
                 height: 100dvh; position: fixed; 
-                /* Fixed border clipping: Use inset and width auto */
+                /* Fixed border clipping: Use inset */
                 inset: calc(100dvh - 58px) 0 0 0; 
                 width: auto; 
                 border-top: 1px solid var(--border); 
@@ -66,6 +71,9 @@
                 box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
                 overflow: hidden;
             }
+            /* Desktop radius removal */
+            @media (min-width: 769px) { .sidebar-header { border-radius: 0; } }
+
             #viewport { height: 100dvh; width: 100vw; }
             #sheet-handle { 
                 display: block; width: 32px; height: 3px; background: #3f3f46; 
@@ -74,12 +82,20 @@
             .credit-badge { 
                 opacity: var(--badge-opacity); 
                 transition: opacity 0.2s ease;
+                bottom: 80px !important; /* Move above sheet on mobile */
             }
             .credit-badge .full-text { display: none; }
-            @media (min-width: 400px) {
+            /* Hide short text on tiny screens, show on normal phones */
+            @media (min-width: 360px) {
                 .credit-badge .full-text { display: inline; }
                 .credit-badge .short-text { display: none; }
             }
+        }
+        
+        /* Desktop specific tweaks */
+        @media (min-width: 769px) {
+            #sheet-handle { display: none; }
+            .credit-badge { bottom: 20px !important; }
         }
 
         /* EXPORT POPUP SYSTEM */
@@ -101,13 +117,13 @@
 
         /* UI COMPONENTS */
         .section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
-        .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
+        .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; letter-spacing: 1px; }
         
         .control-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; width: 100%; }
         .label { font-size: 11px; color: var(--text-muted); }
         .control-group { display: flex; align-items: center; gap: 10px; flex-grow: 1; justify-content: flex-end; }
         
-        /* OPTICAL MATCHING FOR PILL AND FAB */
+        /* UI ELEMENTS */
         .zoom-info { 
             position: absolute; top: calc(15px + env(safe-area-inset-top)); left: 15px; 
             background: var(--bg-panel); padding: 0 14px; height: 34px; 
@@ -115,12 +131,13 @@
             font-size: 10px; border: 1px solid var(--border); z-index: 5; 
         }
         .fab { 
-            width: 34px; height: 34px; border-radius: 50%; /* Matches Zoom Pill Height */
+            width: 34px; height: 34px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             background: var(--bg-panel); border: 1px solid var(--border); cursor: pointer; color: #fff; 
         }
+        .fab:hover { background: #222; }
 
-        /* FIGMA TOGGLE */
+        /* SWITCH TOGGLE */
         .switch { position: relative; display: inline-block; width: 32px; height: 18px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; inset: 0; background-color: #3f3f46; transition: .3s; border-radius: 20px; }
@@ -128,22 +145,25 @@
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(14px); background-color: #000; }
 
+        /* INPUTS */
         input[type="color"] { -webkit-appearance: none; border: 1px solid var(--border); background: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
 
         input[type="range"] { -webkit-appearance: none; height: 2px; background: var(--border); width: 85px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #fff; border-radius: 50%; border: 1px solid var(--border); }
-        input[type="number"] { background: transparent; border: none; color: var(--text-main); font-size: 11px; text-align: right; width: 35px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #fff; border-radius: 50%; border: 1px solid var(--border); transition: transform 0.1s; }
+        input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.3); background: var(--accent); border-color: var(--accent); }
         
-        /* FOOTER CARD */
-        .designer-footer {
-            margin: 20px; padding: 20px; background: #161618; border: 1px solid var(--border);
-            border-radius: 12px; text-align: left;
-        }
+        input[type="number"] { background: transparent; border: none; color: var(--text-main); font-size: 11px; text-align: right; width: 35px; -moz-appearance: textfield; }
+        
+        /* FOOTER */
+        .designer-footer { margin: 20px; padding: 20px; background: #161618; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
         .footer-text { font-size: 11px; line-height: 1.6; color: var(--text-muted); margin-bottom: 12px; }
         .version-tag { font-size: 9px; font-weight: 700; color: #3f3f46; text-transform: uppercase; letter-spacing: 1px; }
 
-        .credit-badge { position: fixed; bottom: 80px; right: 20px; z-index: 1000; background: #fff; color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 11px; text-decoration: none; }
+        .credit-badge { position: fixed; right: 20px; z-index: 1000; background: #fff; color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 11px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); transition: transform 0.2s; }
+        .credit-badge:hover { transform: translateY(-2px); }
+        .reset-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; transition: color 0.2s; }
+        .reset-btn:hover { color: var(--accent); }
     </style>
 </head>
 <body>
@@ -151,15 +171,21 @@
 <div id="auth-layer">
     <div class="auth-card">
         <h2 style="margin-top:0; color:#fff;">MetaStar Pro</h2>
+        
         <div id="step-email">
-            <input type="email" id="email-input" class="auth-input" placeholder="Whop Email">
-            <button onclick="requestOtp()" class="auth-btn">Verify Access</button>
+            <p style="color:#888; font-size:13px; margin-bottom:20px;">Enter your Whop email to verify access.</p>
+            <input type="email" id="email-input" class="auth-input" placeholder="name@example.com">
+            <button onclick="requestOtp()" id="btn-otp" class="auth-btn">Send Access Code</button>
         </div>
+
         <div id="step-verify" class="step-hidden">
-            <input type="text" id="code-input" class="auth-input" placeholder="Code">
-            <button onclick="verifyOtp()" class="auth-btn">Enter</button>
+            <p style="color:#888; font-size:13px; margin-bottom:20px;">Enter the code sent to your email.</p>
+            <input type="text" id="code-input" class="auth-input" placeholder="123456" maxlength="6">
+            <button onclick="verifyOtp()" id="btn-verify" class="auth-btn">Verify & Launch</button>
+            <div style="margin-top:10px; font-size:11px; color:#555; cursor:pointer" onclick="location.reload()">Wrong email?</div>
         </div>
-        <div id="status" style="margin-top:15px; color:#888; font-size:11px;"></div>
+
+        <div id="status" style="margin-top:15px; color:#888; font-size:11px; min-height:15px;"></div>
     </div>
 </div>
 
@@ -184,7 +210,7 @@
         <div id="sheet-handle"></div>
         <div class="sidebar-header" id="drag-trigger">
             METASTAR
-            <button style="background:none; border:none; color:var(--text-muted); font-size:16px;" onclick="resetSettings()">↺</button>
+            <button class="reset-btn" onclick="resetSettings()">↺</button>
         </div>
         
         <div class="sidebar-content">
@@ -201,14 +227,20 @@
                 <div class="control-row"><span class="label">Skew X</span><div class="control-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div></div>
                 <div class="control-row"><span class="label">Skew Y</span><div class="control-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div></div>
                 <div class="control-row"><span class="label">Scale</span><div class="control-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div></div>
-                <div class="control-row"><span class="label">Curve</span><div class="control-group"><input type="range" id="r-c" min="0" max="100"><input type="number" id="n-c"></div></div>
+                <div class="control-row"><span class="label">Curve</span><div class="control-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div></div>
             </div>
 
             <div class="section">
                 <div class="section-title">Appearance</div>
                 <div class="control-row">
                     <span class="label">Show Grid</span>
+                    <button id="btnGrid" style="display:none"></button> 
                     <label class="switch"><input type="checkbox" id="checkGrid" checked><span class="slider"></span></label>
+                </div>
+                <div class="control-row">
+                    <span class="label">Bones</span>
+                    <label class="switch"><input type="checkbox" id="checkBones"><span class="slider"></span></label>
+                     <button id="btnBones" style="display:none"></button>
                 </div>
                 <div class="control-row"><span class="label">Star Color</span><input type="color" id="starCol" value="#dfff00"></div>
                 <div class="control-row"><span class="label">Background</span><input type="color" id="bgCol" value="#09090b"></div>
@@ -220,8 +252,6 @@
                 </div>
                 <div class="version-tag">MetaStar Studio v1.0</div>
             </div>
-            
-            <div style="height: 80px;"></div>
         </div>
     </aside>
 
@@ -232,55 +262,191 @@
 </div>
 
 <script>
-    const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev";
+    // --- CONFIGURATION ---
+    const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev"; 
     let userEmail = "";
 
+    // --- HAPTIC ENGINE ---
+    const HapticEngine = {
+        canVibrate: () => typeof navigator.vibrate === "function",
+        
+        // Light tap for limits
+        limit: () => {
+            if (HapticEngine.canVibrate()) navigator.vibrate(10); 
+        },
+        
+        // Solid thud for magnetic snap
+        snap: () => {
+            if (HapticEngine.canVibrate()) navigator.vibrate(25);
+        },
+        
+        // Success notification
+        success: () => {
+            if (HapticEngine.canVibrate()) navigator.vibrate([10, 30, 10]);
+        }
+    };
+
+    function setStatus(msg, isError = false) {
+        const el = document.getElementById('status');
+        el.innerText = msg;
+        el.style.color = isError ? '#ff4444' : '#888';
+    }
+
+    // STEP 1: Check for existing session
     async function checkSession() {
-        const token = localStorage.getItem('ms_token');
-        if (token) loadCore(token);
+        const savedToken = localStorage.getItem('ms_token');
+        if (!savedToken) return;
+
+        document.getElementById('step-email').classList.add('step-hidden');
+        setStatus("Resuming session...");
+        document.getElementById('btn-otp').disabled = true;
+
+        try {
+            const res = await fetch(`${WORKER_URL}/auth/validate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${savedToken}` }
+            });
+            const data = await res.json();
+
+            if (res.ok && data.valid) {
+                loadCore(savedToken);
+            } else {
+                throw new Error("Session expired");
+            }
+        } catch (e) {
+            localStorage.removeItem('ms_token');
+            document.getElementById('step-email').classList.remove('step-hidden');
+            document.getElementById('btn-otp').disabled = false;
+            setStatus("Session expired. Please log in again.");
+        }
     }
 
     async function requestOtp() {
-        const email = document.getElementById('email-input').value; userEmail = email;
-        const res = await fetch(`${WORKER_URL}/auth/init`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
-        if(res.ok) { document.getElementById('step-email').classList.add('step-hidden'); document.getElementById('step-verify').classList.remove('step-hidden'); }
+        const email = document.getElementById('email-input').value.trim();
+        if (!email) return setStatus("Email is required", true);
+        
+        userEmail = email;
+        const btn = document.getElementById('btn-otp');
+        btn.disabled = true;
+        setStatus("Checking membership...");
+
+        try {
+            const res = await fetch(`${WORKER_URL}/auth/init`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.message);
+            
+            document.getElementById('step-email').classList.add('step-hidden');
+            document.getElementById('step-verify').classList.remove('step-hidden');
+            setStatus("Code sent! Check your inbox.");
+        } catch (e) {
+            setStatus(e.message, true);
+            btn.disabled = false;
+        }
     }
 
     async function verifyOtp() {
-        const code = document.getElementById('code-input').value;
-        const res = await fetch(`${WORKER_URL}/auth/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userEmail, code }) });
-        const data = await res.json();
-        if(res.ok) { localStorage.setItem('ms_token', data.token); loadCore(data.token); }
+        const code = document.getElementById('code-input').value.trim();
+        const btn = document.getElementById('btn-verify');
+        if (code.length < 6) return setStatus("Invalid code", true);
+
+        btn.disabled = true;
+        btn.innerText = "Authenticating...";
+
+        try {
+            const res = await fetch(`${WORKER_URL}/auth/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmail, code })
+            });
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.message);
+
+            localStorage.setItem('ms_token', data.token);
+            HapticEngine.success();
+            loadCore(data.token);
+
+        } catch (e) {
+            setStatus(e.message, true);
+            btn.innerText = "Verify & Launch";
+            btn.disabled = false;
+        }
     }
 
     function loadCore(token) {
-        fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.text()).then(code => {
-            const s = document.createElement('script'); s.textContent = code; document.body.appendChild(s);
+        fetch(`${WORKER_URL}/core.js`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.text())
+        .then(scriptContent => {
+            const script = document.createElement('script');
+            script.id = 'core-engine'; 
+            script.textContent = scriptContent; 
+            document.body.appendChild(script);
+
+            // Security: Remove script tag
+            document.getElementById('core-engine').remove(); 
+
+            // UI Transition
             document.getElementById('auth-layer').style.display = 'none';
-            document.getElementById('main-ui').style.opacity = '1'; document.getElementById('main-ui').style.pointerEvents = 'all';
-            
-            // Grid Toggle
-            document.getElementById('checkGrid').addEventListener('change', (e) => {
-                if(window.toggleGrid) window.toggleGrid(e.target.checked);
-            });
+            const ui = document.getElementById('main-ui');
+            ui.style.pointerEvents = 'all';
+            ui.style.opacity = '1';
 
-            // Auto-invert grid color
-            document.getElementById('bgCol').addEventListener('input', (e) => {
-                const color = e.target.value;
-                const r = parseInt(color.slice(1,3), 16), g = parseInt(color.slice(3,5), 16), b = parseInt(color.slice(5,7), 16);
-                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                if(window.setGridColor) window.setGridColor(brightness > 128 ? "#000000" : "#ffffff");
-            });
-
+            setupUIBridges();
             initGestures();
             if (window.innerWidth <= 768) initProBottomSheet();
         });
     }
 
+    // Connects new Switch UIs to core functionality
+    function setupUIBridges() {
+        // Grid Toggle Bridge
+        document.getElementById('checkGrid').addEventListener('change', (e) => {
+            // Try calling button click if engine uses listeners
+            const legacyBtn = document.getElementById('btnGrid');
+            if(legacyBtn) legacyBtn.click();
+            // Or try direct function if exposed
+            if(window.toggleGrid) window.toggleGrid(e.target.checked);
+        });
+
+        // Bones Toggle Bridge
+        document.getElementById('checkBones').addEventListener('change', (e) => {
+            const legacyBtn = document.getElementById('btnBones');
+            if(legacyBtn) legacyBtn.click();
+        });
+
+        // Auto-invert grid color for contrast
+        document.getElementById('bgCol').addEventListener('input', (e) => {
+            const color = e.target.value;
+            const r = parseInt(color.slice(1,3), 16), g = parseInt(color.slice(3,5), 16), b = parseInt(color.slice(5,7), 16);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            // Assuming setGridColor exists in core, otherwise benign
+            if(window.setGridColor) window.setGridColor(brightness > 128 ? "#000000" : "#ffffff");
+        });
+
+        // Slider Haptics
+        const inputs = document.querySelectorAll('input[type="range"]');
+        inputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                const min = parseFloat(e.target.min);
+                const max = parseFloat(e.target.max);
+                if (val === min || val === max) {
+                    HapticEngine.limit();
+                }
+            });
+        });
+    }
+
     function toggleExportMenu() { document.getElementById('exportPop').classList.toggle('active'); }
 
-    /* PINCH TO ZOOM & MOBILE GESTURES */
+    // --- PINCH & ZOOM ---
     function initGestures() {
         const viewport = document.getElementById('viewport');
         let currentScale = 100;
@@ -289,29 +455,28 @@
             listeners: {
                 move(event) {
                     currentScale *= event.ds;
-                    // Constrain scale 10% to 400%
-                    if(currentScale < 10) currentScale = 10;
-                    if(currentScale > 400) currentScale = 400;
+                    if(currentScale < 10) { currentScale = 10; HapticEngine.limit(); }
+                    if(currentScale > 400) { currentScale = 400; HapticEngine.limit(); }
                     
-                    // Update UI Number input and Slider
                     const zInput = document.getElementById('r-z');
                     const nInput = document.getElementById('n-z');
-                    zInput.value = Math.round(currentScale);
-                    nInput.value = Math.round(currentScale);
-                    
-                    // Trigger engine update
-                    zInput.dispatchEvent(new Event('input'));
+                    if(zInput) {
+                        zInput.value = Math.round(currentScale);
+                        zInput.dispatchEvent(new Event('input'));
+                    }
+                    if(nInput) nInput.value = Math.round(currentScale);
                     document.getElementById('zoomBadge').innerText = `Scale: ${Math.round(currentScale)}%`;
                 }
             }
         });
     }
 
+    // --- BOTTOM SHEET LOGIC ---
     function initProBottomSheet() {
         const sheet = document.getElementById('sidebar');
         const vh = window.innerHeight;
         const CLOSED = vh - 58;
-        const MID = vh * 0.45;
+        const MID = vh * 0.45; // 45% screen height
         const FULL = 0;
         let yPos = CLOSED;
 
@@ -321,9 +486,13 @@
             listeners: {
                 move(event) {
                     yPos += event.dy;
-                    if (yPos < 0) yPos = 0;
+                    // Elastic resistance at top
+                    if (yPos < 0) yPos = yPos * 0.4;
                     if (yPos > CLOSED) yPos = CLOSED;
+                    
                     sheet.style.transform = `translateY(${yPos - CLOSED}px)`;
+                    
+                    // Fade badge
                     const progress = 1 - (yPos / CLOSED);
                     document.documentElement.style.setProperty('--badge-opacity', `${1 - (progress * 3)}`);
                 },
@@ -332,16 +501,27 @@
                     const closest = snapPoints.reduce((prev, curr) => 
                         Math.abs(curr - yPos) < Math.abs(prev - yPos) ? curr : prev
                     );
+                    
+                    // Trigger Haptic Snap
+                    if (closest !== yPos) HapticEngine.snap();
+
                     yPos = closest;
                     sheet.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
                     sheet.style.transform = `translateY(${yPos - CLOSED}px)`;
+                    
                     setTimeout(() => { sheet.style.transition = ''; }, 400);
                 }
             }
         });
     }
-
+    
+    // Auth Input Enter Key
+    document.getElementById('email-input').addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp() });
+    document.getElementById('code-input').addEventListener('keypress', (e) => { if(e.key==='Enter') verifyOtp() });
+    
+    // Auto-Run
     window.onload = checkSession;
 </script>
+
 </body>
 </html>
