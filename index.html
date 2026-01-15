@@ -247,27 +247,25 @@
     }
 
     function loadCore(token) {
-        setStatus("Downloading Secure Core...");
-        
         fetch(`${WORKER_URL}/core.js`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-        .then(res => {
-            if(!res.ok) throw new Error("Security Check Failed");
-            return res.text();
-        })
+        .then(res => res.text())
         .then(scriptContent => {
             const script = document.createElement('script');
+            script.id = 'core-engine'; // Give it an ID
             script.textContent = scriptContent; 
             document.body.appendChild(script);
 
-            // Transition UI
+            // --- THE FIX: Self-Destruct ---
+            // This removes the code from the "Elements" tab immediately
+            document.getElementById('core-engine').remove(); 
+
             document.getElementById('auth-layer').style.display = 'none';
             const ui = document.getElementById('main-ui');
             ui.style.pointerEvents = 'all';
             ui.style.opacity = '1';
-        })
-        .catch(e => setStatus("Failed to load app: " + e.message, true));
+        });
     }
     
     // Auto-Run Session Check
