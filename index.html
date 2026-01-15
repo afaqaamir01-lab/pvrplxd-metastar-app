@@ -6,7 +6,6 @@
     <title>MetaStar Studio Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* --- CORE STYLES (From V1) --- */
         :root {
             --bg-canvas: #09090b; --bg-panel: #111113; --border: #27272a;
             --text-main: #e4e4e7; --text-muted: #71717a; --accent: #dfff00;
@@ -15,7 +14,7 @@
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: var(--bg-canvas); color: var(--text-main); font-family: 'Space Grotesk', sans-serif; height: 100vh; overflow: hidden; font-size: 13px; }
 
-        /* --- AUTH LAYER (From V2) --- */
+        /* AUTH LAYER */
         #auth-layer { position: fixed; inset: 0; background: var(--bg-canvas); z-index: 10000; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: var(--bg-panel); padding: 40px; border: 1px solid #333; border-radius: 12px; width: 340px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .auth-input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; margin-bottom: 12px; text-align: center; font-size: 16px; letter-spacing: 1px; }
@@ -25,7 +24,7 @@
         .step-hidden { display: none; }
         .status-msg { color: #888; font-size: 12px; margin-top: 15px; min-height: 15px; }
 
-        /* --- APP UI (From V1) --- */
+        /* APP UI */
         #main-ui { opacity: 0; transition: opacity 1s ease; pointer-events: none; width: 100%; height: 100%; display: flex; }
         #sidebar { width: var(--sidebar-width); background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
         .sidebar-header { padding: 20px 24px; font-weight: 700; font-size: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; background: var(--bg-panel); z-index: 10; }
@@ -154,6 +153,39 @@
         el.style.color = isError ? '#ff4444' : '#888';
     }
 
+    // STEP 1: Check for existing session
+    async function checkSession() {
+        const savedToken = localStorage.getItem('ms_token');
+        if (!savedToken) return;
+
+        // UI: Show resuming state
+        document.getElementById('step-email').classList.add('step-hidden');
+        setStatus("Resuming session...");
+        document.getElementById('btn-otp').disabled = true;
+
+        try {
+            const res = await fetch(`${WORKER_URL}/auth/validate`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${savedToken}` }
+            });
+            const data = await res.json();
+
+            if (res.ok && data.valid) {
+                // Token is good, skip auth
+                loadCore(savedToken);
+            } else {
+                // Token expired
+                throw new Error("Session expired");
+            }
+        } catch (e) {
+            // Reset to login screen
+            localStorage.removeItem('ms_token');
+            document.getElementById('step-email').classList.remove('step-hidden');
+            document.getElementById('btn-otp').disabled = false;
+            setStatus("Session expired. Please log in again.");
+        }
+    }
+
     async function requestOtp() {
         const email = document.getElementById('email-input').value.trim();
         if (!email) return setStatus("Email is required", true);
@@ -201,7 +233,10 @@
 
             if (!res.ok) throw new Error(data.message);
 
-            // SUCCESS: We have a session token
+            // SAVE TOKEN FOR NEXT TIME
+            localStorage.setItem('ms_token', data.token);
+
+            // SUCCESS
             loadCore(data.token);
 
         } catch (e) {
@@ -214,7 +249,6 @@
     function loadCore(token) {
         setStatus("Downloading Secure Core...");
         
-        // Fetch the core code from the worker securely
         fetch(`${WORKER_URL}/core.js`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
@@ -236,8 +270,12 @@
         .catch(e => setStatus("Failed to load app: " + e.message, true));
     }
     
-    // Auto-focus email
-    window.onload = () => document.getElementById('email-input').focus();
+    // Auto-Run Session Check
+    window.onload = () => {
+        checkSession();
+        // Focus email if no session
+        if(!localStorage.getItem('ms_token')) document.getElementById('email-input').focus();
+    };
     
     // Allow Enter key
     document.getElementById('email-input').addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp() });
