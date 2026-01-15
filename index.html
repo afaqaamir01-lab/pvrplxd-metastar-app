@@ -149,7 +149,7 @@
 
     function setStatus(msg, isError = false) {
         const el = document.getElementById('status');
-        el.innerText = msg;
+        el.innerHTML = msg;
         el.style.color = isError ? '#ff4444' : '#888';
     }
 
@@ -158,31 +158,42 @@
         const savedToken = localStorage.getItem('ms_token');
         if (!savedToken) return;
 
-        // UI: Show resuming state
-        document.getElementById('step-email').classList.add('step-hidden');
+        // 1. Prepare UI for "Resuming" state
+        const emailStep = document.getElementById('step-email');
+        const otpBtn = document.getElementById('btn-otp');
+        
+        emailStep.classList.add('step-hidden');
+        otpBtn.disabled = true;
         setStatus("Resuming session...");
-        document.getElementById('btn-otp').disabled = true;
 
         try {
+            // 2. Validate with the Worker (Sending the Fingerprint for Device Locking)
             const res = await fetch(`${WORKER_URL}/auth/validate`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${savedToken}` }
+                headers: { 
+                    'Authorization': `Bearer ${savedToken}`,
+                    'X-Fingerprint': getFingerprint() // Ensures session belongs to this device
+                }
             });
+
             const data = await res.json();
 
             if (res.ok && data.valid) {
-                // Token is good, skip auth
+                // 3. Session is active and subscription is still valid
                 loadCore(savedToken);
             } else {
-                // Token expired
-                throw new Error("Session expired");
+                // 4. Session failed (Could be: Sub expired, Maintenance, or Device mismatch)
+                throw new Error(data.message || "Session expired. Please log in again.");
             }
         } catch (e) {
-            // Reset to login screen
+            // 5. Clean up and restore login UI
             localStorage.removeItem('ms_token');
-            document.getElementById('step-email').classList.remove('step-hidden');
-            document.getElementById('btn-otp').disabled = false;
-            setStatus("Session expired. Please log in again.");
+            emailStep.classList.remove('step-hidden');
+            otpBtn.disabled = false;
+            
+            // We use setStatus here which should use .innerHTML 
+            // to show the "Get Subscription" link if that was the error.
+            setStatus(e.message, true);
         }
     }
 
@@ -227,7 +238,11 @@
             const res = await fetch(`${WORKER_URL}/auth/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: userEmail, code })
+                body: JSON.stringify({ 
+                    email: userEmail, 
+                    code: code, 
+                    fingerprint: getFingerprint() // New
+                })
             });
             const data = await res.json();
 
@@ -247,10 +262,11 @@
     }
 
     function loadCore(token) {
-        setStatus("Downloading Secure Core...");
-        
         fetch(`${WORKER_URL}/core.js`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'X-Fingerprint': getFingerprint() // New
+            }
         })
         .then(res => {
             if(!res.ok) throw new Error("Security Check Failed");
@@ -268,6 +284,15 @@
             ui.style.opacity = '1';
         })
         .catch(e => setStatus("Failed to load app: " + e.message, true));
+    }
+
+    function getFingerprint() {
+        let id = localStorage.getItem('ms_fp');
+        if (!id) {
+            id = crypto.randomUUID();
+            localStorage.setItem('ms_fp', id);
+        }
+        return id;
     }
     
     // Auto-Run Session Check
