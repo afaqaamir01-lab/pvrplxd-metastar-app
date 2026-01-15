@@ -123,7 +123,7 @@
         // The browser will fetch it, attaching the token as a URL param or we use fetch+eval
         // Using fetch+eval allows us to catch errors if the token is rejected
         
-        fetch(`${WORKER_URL}/secure/core.js`, {
+        fetch(`${WORKER_URL}/core.js`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => {
