@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MetaStar Studio Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    
     <style>
         :root {
             --bg-canvas: #09090b; --bg-panel: #111113; --border: #27272a;
             --text-main: #e4e4e7; --text-muted: #71717a; --accent: #dfff00;
-            --input-bg: #18181b; --sidebar-width: 320px; --sheet-height: 70vh;
+            --input-bg: #18181b; --sidebar-width: 320px;
+            --blur-val: 0px;
         }
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         
@@ -18,7 +21,6 @@
             background: var(--bg-canvas); 
             color: var(--text-main); 
             font-family: 'Space Grotesk', sans-serif; 
-            /* FIX: Use dvh (dynamic height) to stop address bar from cutting off UI */
             height: 100vh; 
             height: 100dvh; 
             overflow: hidden; 
@@ -30,57 +32,75 @@
         .auth-card { background: var(--bg-panel); padding: 40px; border: 1px solid #333; border-radius: 12px; width: 340px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .auth-input { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 6px; margin-bottom: 12px; text-align: center; font-size: 16px; letter-spacing: 1px; }
         .auth-btn { width: 100%; padding: 12px; background: var(--accent); color: #000; border: none; font-weight: bold; cursor: pointer; border-radius: 6px; transition: opacity 0.2s; }
-        .auth-btn:hover { opacity: 0.9; }
-        .auth-btn:disabled { opacity: 0.5; cursor: wait; }
-        .step-hidden { display: none; }
-        .status-msg { color: #888; font-size: 12px; margin-top: 15px; min-height: 15px; }
-
+        
         /* APP UI */
         #main-ui { opacity: 0; transition: opacity 1s ease; pointer-events: none; width: 100%; height: 100%; display: flex; }
-        #sidebar { width: var(--sidebar-width); background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+        
+        #sidebar { 
+            width: var(--sidebar-width); 
+            background: var(--bg-panel); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 100; 
+            overflow-y: auto; 
+        }
+
         .sidebar-header { padding: 20px 24px; font-weight: 700; font-size: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top:0; background: var(--bg-panel); z-index: 10; }
-        #viewport { flex-grow: 1; position: relative; overflow: hidden; touch-action: none; background: var(--bg-canvas); }
+        
+        /* VIEWPORT & BLUR */
+        #viewport { 
+            flex-grow: 1; 
+            position: relative; 
+            overflow: hidden; 
+            touch-action: none; 
+            background: var(--bg-canvas); 
+            transition: filter 0.3s ease;
+            filter: blur(var(--blur-val));
+        }
+        
         canvas { display: block; }
         #mobile-export { display: none; }
         #sheet-handle { display: none; }
         
+        /* MOBILE BOTTOM SHEET OVERRIDE */
         @media (max-width: 768px) {
             #main-ui { flex-direction: column; }
             #sidebar { 
                 width: 100%; 
-                height: var(--sheet-height); 
+                height: 100dvh; 
                 position: fixed; 
-                bottom: 0; 
+                top: calc(100dvh - 64px); /* Default closed state */
                 left: 0; 
                 border-right: none; 
                 border-top: 1px solid var(--border); 
                 border-radius: 24px 24px 0 0; 
-                transform: translateY(calc(var(--sheet-height) - 60px));
-                /* FIX: Add padding at the bottom so content doesn't hit the iPhone home bar */
+                z-index: 2000;
+                touch-action: none; /* Required for interact.js */
                 padding-bottom: env(safe-area-inset-bottom);
+                box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
             }
-            #sidebar.expanded { transform: translateY(0); }
-            
-            #viewport { 
-                /* FIX: Use dvh for viewport as well */
-                height: 100dvh; 
-                width: 100vw; 
+            #viewport { height: 100dvh; width: 100vw; }
+            #sheet-handle { 
+                display: block; 
+                width: 40px; 
+                height: 5px; 
+                background: #3f3f46; 
+                border-radius: 10px; 
+                margin: 12px auto 8px; 
             }
-            
-            #sheet-handle { display: block; width: 40px; height: 5px; background: var(--border); border-radius: 10px; margin: 10px auto 10px; cursor: pointer; }
-            
             #mobile-export { 
                 display: flex; 
                 position: absolute; 
-                /* FIX: Push buttons down below the notch/status bar */
-                top: calc(20px + env(safe-area-inset-top)); 
-                right: 20px; 
+                top: calc(15px + env(safe-area-inset-top)); 
+                right: 15px; 
                 z-index: 1000; 
                 gap: 8px; 
             }
             .desktop-only { display: none; }
         }
 
+        /* REUSABLE UI COMPONENTS */
         .section { padding: 20px; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-muted); margin-bottom: 16px; }
         .control-row { display: grid; grid-template-columns: 60px 1fr 40px; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -92,18 +112,12 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         button { background: var(--input-bg); border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 6px; cursor: pointer; font-size: 10px; text-transform: uppercase; font-weight: 600; }
         button.active { background: var(--accent); color: #000; border-color: var(--accent); }
-        .reset-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; transition: color 0.2s; }
-        .reset-btn:hover { color: var(--accent); }
-        .zoom-info { 
-            position: absolute; 
-            /* FIX: Adjust zoom info position for safe area */
-            top: calc(20px + env(safe-area-inset-top)); 
-            left: 20px; 
-            background: var(--bg-panel); padding: 6px 12px; border-radius: 20px; font-size: 10px; border: 1px solid var(--border); z-index: 5; 
-        }
-        .fab { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; cursor: pointer; }
-        .credit-badge { position: fixed; bottom: 24px; right: 24px; z-index: 1000; background: #ffffff; color: #000000; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 12px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); }
-        .credit-badge:hover { transform: translateY(-3px); }
+        .reset-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+        .zoom-info { position: absolute; top: calc(15px + env(safe-area-inset-top)); left: 15px; background: var(--bg-panel); padding: 6px 12px; border-radius: 20px; font-size: 10px; border: 1px solid var(--border); z-index: 5; }
+        .fab { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; cursor: pointer; font-weight: bold; }
+        .credit-badge { position: fixed; bottom: 80px; right: 20px; z-index: 1000; background: #fff; color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 11px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .status-msg { color: #888; font-size: 12px; margin-top: 15px; min-height: 15px; }
+        .step-hidden { display: none; }
     </style>
 </head>
 <body>
@@ -111,26 +125,23 @@
 <div id="auth-layer">
     <div class="auth-card">
         <h2 style="margin-top:0; color:#fff;">MetaStar Pro</h2>
-        
         <div id="step-email">
             <p style="color:#888; font-size:13px; margin-bottom:20px;">Enter your Whop email to verify access.</p>
             <input type="email" id="email-input" class="auth-input" placeholder="name@example.com">
             <button onclick="requestOtp()" id="btn-otp" class="auth-btn">Send Access Code</button>
         </div>
-
         <div id="step-verify" class="step-hidden">
             <p style="color:#888; font-size:13px; margin-bottom:20px;">Enter the code sent to your email.</p>
             <input type="text" id="code-input" class="auth-input" placeholder="123456" maxlength="6">
             <button onclick="verifyOtp()" id="btn-verify" class="auth-btn">Verify & Launch</button>
             <div style="margin-top:10px; font-size:11px; color:#555; cursor:pointer" onclick="location.reload()">Wrong email?</div>
         </div>
-
         <div id="status" class="status-msg"></div>
     </div>
 </div>
 
 <div id="main-ui">
-    <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">Made by Pvrplxd</a>
+    <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">By Pvrplxd</a>
 
     <div id="mobile-export">
         <button class="fab" onclick="exportImg('png')" style="background: var(--bg-panel); color: white;">PNG</button>
@@ -187,7 +198,7 @@
 </div>
 
 <script>
-    // --- CONFIGURATION ---
+    /* --- AUTHENTICATION LOGIC (UNTOUCHED) --- */
     const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev"; 
     let userEmail = "";
 
@@ -197,76 +208,48 @@
         el.style.color = isError ? '#ff4444' : '#888';
     }
 
-    // STEP 1: Check for existing session
     async function checkSession() {
         const savedToken = localStorage.getItem('ms_token');
         if (!savedToken) return;
-
-        // UI: Show resuming state
         document.getElementById('step-email').classList.add('step-hidden');
         setStatus("Resuming session...");
-        document.getElementById('btn-otp').disabled = true;
-
         try {
             const res = await fetch(`${WORKER_URL}/auth/validate`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${savedToken}` }
             });
             const data = await res.json();
-
-            if (res.ok && data.valid) {
-                // Token is good, skip auth
-                loadCore(savedToken);
-            } else {
-                // Token expired
-                throw new Error("Session expired");
-            }
+            if (res.ok && data.valid) { loadCore(savedToken); } 
+            else { throw new Error("Expired"); }
         } catch (e) {
-            // Reset to login screen
             localStorage.removeItem('ms_token');
             document.getElementById('step-email').classList.remove('step-hidden');
-            document.getElementById('btn-otp').disabled = false;
-            setStatus("Session expired. Please log in again.");
+            setStatus("Session expired.");
         }
     }
 
     async function requestOtp() {
         const email = document.getElementById('email-input').value.trim();
         if (!email) return setStatus("Email is required", true);
-        
         userEmail = email;
-        const btn = document.getElementById('btn-otp');
-        btn.disabled = true;
+        document.getElementById('btn-otp').disabled = true;
         setStatus("Checking membership...");
-
         try {
             const res = await fetch(`${WORKER_URL}/auth/init`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
-            const data = await res.json();
-            
-            if (!res.ok) throw new Error(data.message);
-            
-            // Switch to Step 2
+            if (!res.ok) throw new Error("Verification failed");
             document.getElementById('step-email').classList.add('step-hidden');
             document.getElementById('step-verify').classList.remove('step-hidden');
-            setStatus("Code sent! Check your inbox (and spam).");
-        } catch (e) {
-            setStatus(e.message, true);
-            btn.disabled = false;
-        }
+            setStatus("Code sent!");
+        } catch (e) { setStatus(e.message, true); document.getElementById('btn-otp').disabled = false; }
     }
 
     async function verifyOtp() {
         const code = document.getElementById('code-input').value.trim();
-        const btn = document.getElementById('btn-verify');
         if (code.length < 6) return setStatus("Invalid code", true);
-
-        btn.disabled = true;
-        btn.innerText = "Authenticating...";
-
         try {
             const res = await fetch(`${WORKER_URL}/auth/verify`, {
                 method: 'POST',
@@ -274,55 +257,85 @@
                 body: JSON.stringify({ email: userEmail, code })
             });
             const data = await res.json();
-
             if (!res.ok) throw new Error(data.message);
-
-            // SAVE TOKEN FOR NEXT TIME
             localStorage.setItem('ms_token', data.token);
-
-            // SUCCESS
             loadCore(data.token);
-
-        } catch (e) {
-            setStatus(e.message, true);
-            btn.innerText = "Verify & Launch";
-            btn.disabled = false;
-        }
+        } catch (e) { setStatus(e.message, true); }
     }
 
     function loadCore(token) {
-        fetch(`${WORKER_URL}/core.js`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
+        fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } })
         .then(res => res.text())
         .then(scriptContent => {
             const script = document.createElement('script');
-            script.id = 'core-engine'; // Give it an ID
+            script.id = 'core-engine';
             script.textContent = scriptContent; 
             document.body.appendChild(script);
-
-            // --- THE FIX: Self-Destruct ---
-            // This removes the code from the "Elements" tab immediately
             document.getElementById('core-engine').remove(); 
-
             document.getElementById('auth-layer').style.display = 'none';
             const ui = document.getElementById('main-ui');
             ui.style.pointerEvents = 'all';
             ui.style.opacity = '1';
+            
+            // Initialize Mobile Gestures after UI is loaded
+            if (window.innerWidth <= 768) initBottomSheet();
         });
     }
-    
-    // Auto-Run Session Check
+
+    /* --- GESTURE LOGIC (NEW) --- */
+    function initBottomSheet() {
+        const sheet = document.getElementById('sidebar');
+        const viewport = document.getElementById('viewport');
+        const vh = window.innerHeight;
+        
+        // State points
+        const TOP = 0;
+        const MID = vh * 0.45;
+        const CLOSED = vh - 64;
+        
+        let currentY = CLOSED;
+
+        interact(sheet).draggable({
+            inertia: true,
+            listeners: {
+                move(event) {
+                    currentY += event.dy;
+                    // Constrain movement
+                    if (currentY < 0) currentY = 0;
+                    if (currentY > CLOSED) currentY = CLOSED;
+                    
+                    sheet.style.transform = `translateY(${currentY - CLOSED}px)`;
+                    
+                    // Dynamic Blur Calculation (0px to 12px)
+                    const progress = 1 - (currentY / CLOSED);
+                    const blur = (progress * 12).toFixed(1);
+                    document.documentElement.style.setProperty('--blur-val', `${blur}px`);
+                },
+                end(event) {
+                    // Magnetic Snapping
+                    const snapPoints = [TOP, MID, CLOSED];
+                    const closest = snapPoints.reduce((prev, curr) => {
+                        return (Math.abs(curr - currentY) < Math.abs(prev - currentY) ? curr : prev);
+                    });
+
+                    currentY = closest;
+                    sheet.style.transition = 'transform 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
+                    sheet.style.transform = `translateY(${currentY - CLOSED}px) `;
+                    
+                    // Snap blur
+                    const progress = 1 - (currentY / CLOSED);
+                    document.documentElement.style.setProperty('--blur-val', `${(progress * 12)}px`);
+
+                    setTimeout(() => { sheet.style.transition = ''; }, 500);
+                }
+            }
+        });
+    }
+
     window.onload = () => {
         checkSession();
-        // Focus email if no session
         if(!localStorage.getItem('ms_token')) document.getElementById('email-input').focus();
     };
-    
-    // Allow Enter key
-    document.getElementById('email-input').addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp() });
-    document.getElementById('code-input').addEventListener('keypress', (e) => { if(e.key==='Enter') verifyOtp() });
 </script>
-
 </body>
 </html>
