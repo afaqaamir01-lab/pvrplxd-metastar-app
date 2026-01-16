@@ -5,494 +5,150 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MetaStar Studio Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     
     <style>
         :root {
-            --bg-canvas: #09090b; --bg-panel: #111113; --border: #27272a;
+            --bg-canvas: #000000; --bg-panel: #111113; --border: #27272a;
             --text-main: #e4e4e7; --text-muted: #71717a; --accent: #dfff00;
-            --input-bg: #18181b; --sidebar-width: 320px;
-            --badge-opacity: 1;
+            --sidebar-width: 320px;
         }
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         
         body { 
             margin: 0; background: var(--bg-canvas); color: var(--text-main); 
-            font-family: 'Space Grotesk', sans-serif; height: 100dvh; overflow: hidden; font-size: 13px; 
-            overscroll-behavior: none;
+            font-family: 'Space Grotesk', sans-serif; height: 100dvh; overflow: hidden; 
+            overscroll-behavior: none; touch-action: none;
         }
 
-        /* --- PREMIUM AUTH LAYER --- */
+        /* AUTH LAYER */
         #auth-layer { 
             position: fixed; inset: 0; z-index: 10000; 
             display: flex; align-items: center; justify-content: center; 
-            background: radial-gradient(circle at 50% 10%, #1a1a20 0%, #09090b 80%);
-            transition: opacity 0.5s ease, backdrop-filter 0.5s;
+            background: #000000;
+            transition: opacity 0.5s ease;
         }
-        
-        /* Subtle animated background mesh */
-        #auth-layer::before {
-            content: ''; position: absolute; inset: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23222' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            opacity: 0.5; pointer-events: none;
-        }
-
         .auth-card { 
-            position: relative;
-            background: rgba(17, 17, 19, 0.7); 
+            background: rgba(17, 17, 19, 0.9); 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            padding: 48px 40px; 
-            border: 1px solid rgba(255,255,255,0.08); 
+            padding: 48px 40px; border: 1px solid rgba(255,255,255,0.08); 
             border-radius: 24px; width: 360px; text-align: center; 
-            box-shadow: 0 25px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.05);
-            overflow: hidden;
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
-
-        .auth-logo {
-            font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; color: #fff;
-            background: linear-gradient(135deg, #fff 0%, #888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .auth-desc { color: #666; font-size: 13px; margin-bottom: 32px; line-height: 1.5; }
-
-        .input-group { position: relative; margin-bottom: 16px; text-align: left; }
+        .auth-logo { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #fff; }
+        .auth-desc { color: #666; font-size: 13px; margin-bottom: 32px; }
         .auth-input { 
-            width: 100%; padding: 14px 16px; 
-            background: rgba(0,0,0,0.3); 
-            border: 1px solid #333; 
-            color: #fff; border-radius: 12px; 
-            font-size: 15px; font-family: inherit;
-            transition: all 0.2s ease;
+            width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.5); 
+            border: 1px solid #333; color: #fff; border-radius: 12px; margin-bottom: 16px;
         }
-        .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(223, 255, 0, 0.15); background: rgba(0,0,0,0.5); }
-        .auth-input::placeholder { color: #444; }
-
         .auth-btn { 
-            width: 100%; padding: 14px; 
-            background: var(--text-main); color: #000; 
-            border: none; font-weight: 600; font-size: 14px;
-            cursor: pointer; border-radius: 12px; 
-            transition: transform 0.1s, opacity 0.2s;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 14px; background: var(--text-main); color: #000; 
+            border: none; font-weight: 600; cursor: pointer; border-radius: 12px;
         }
-        .auth-btn:active { transform: scale(0.98); }
-        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-btn:disabled { opacity: 0.5; }
+        .step { display: none; }
+        .step.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(5px); } to { opacity:1; transform: translateY(0); } }
 
-        /* Spinner for button */
-        .spinner {
-            width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); 
-            border-left-color: #000; border-radius: 50%; 
-            animation: spin 0.8s linear infinite; display: none;
+        /* APP UI (Hidden initially) */
+        #main-ui { opacity: 0; pointer-events: none; transition: opacity 1s ease; width: 100%; height: 100%; display: flex; }
+        #sidebar { 
+            width: var(--sidebar-width); background: var(--bg-panel); border-right: 1px solid var(--border); 
+            display: flex; flex-direction: column; z-index: 100;
         }
-        .auth-btn.loading .spinner { display: block; }
-        .auth-btn.loading span { display: none; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #viewport { flex-grow: 1; position: relative; overflow: hidden; background: #000; touch-action: none; }
+        canvas { display: block; width: 100%; height: 100%; }
 
-        /* Transitions between steps */
-        .step-container { display: flex; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); width: 200%; }
-        .step { width: 50%; padding: 4px; opacity: 1; transition: opacity 0.3s; flex-shrink: 0; }
-        .step.inactive { opacity: 0; pointer-events: none; }
-        
-        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
-
-        .helper-link { 
-            margin-top: 20px; font-size: 12px; color: #555; cursor: pointer; 
-            transition: color 0.2s; text-decoration: underline; text-decoration-color: #333; 
-            display: inline-block;
-        }
-        .helper-link:hover { color: #888; }
-        
-        #status-msg { height: 20px; margin-top: 12px; font-size: 12px; color: #ff4444; opacity: 0; transition: opacity 0.2s; }
-        #status-msg.visible { opacity: 1; }
-
-        /* APP UI HIDDEN INITIALLY */
-        #main-ui { opacity: 0; transition: opacity 1s ease; pointer-events: none; width: 100%; height: 100%; display: flex; }
-        
-        /* REST OF APP STYLES (SAME AS BEFORE) */
-        #sidebar { width: var(--sidebar-width); background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; }
-        .sidebar-header { padding: 12px 20px; font-weight: 700; font-size: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); flex-shrink: 0; }
-        .sidebar-content { flex-grow: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 40px; }
-        #viewport { flex-grow: 1; position: relative; overflow: hidden; touch-action: none; background: var(--bg-canvas); }
-        canvas { display: block; }
-        
-        /* MOBILE RESPONSIVE */
+        /* Mobile Responsive */
         @media (max-width: 768px) {
             #main-ui { flex-direction: column; }
-            #sidebar { height: 100dvh; position: fixed; inset: calc(100dvh - 58px) 0 0 0; width: auto; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-radius: 24px 24px 0 0; z-index: 2000; touch-action: none; box-shadow: 0 -10px 40px rgba(0,0,0,0.6); overflow: hidden; }
-            .sidebar-header { border-radius: 24px 24px 0 0; }
-            #viewport { height: 100dvh; width: 100vw; }
-            #sheet-handle { display: block; width: 32px; height: 3px; background: #3f3f46; border-radius: 10px; margin: 8px auto 4px; }
-            .credit-badge { bottom: 80px !important; }
+            #sidebar { 
+                height: 100dvh; position: fixed; inset: calc(100dvh - 58px) 0 0 0; 
+                width: 100%; border-top: 1px solid var(--border); border-radius: 24px 24px 0 0; 
+                transition: transform 0.1s; /* Controlled by JS */
+            }
+            #sheet-handle { width: 32px; height: 3px; background: #3f3f46; border-radius: 10px; margin: 8px auto 4px; }
         }
-        @media (min-width: 769px) { #sheet-handle { display: none; } .credit-badge { bottom: 20px !important; } .sidebar-header { border-radius: 0; } }
 
-        /* UI COMPONENTS */
-        #export-trigger-wrap { position: absolute; top: calc(15px + env(safe-area-inset-top)); right: 15px; z-index: 1001; }
-        .export-pop { position: absolute; top: 45px; right: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; width: 140px; padding: 8px; display: none; flex-direction: column; gap: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transform-origin: top right; }
-        .export-pop.active { display: flex; animation: popIn 0.2s ease-out; }
-        @keyframes popIn { from { opacity:0; transform: scale(0.95); } to { opacity:1; transform: scale(1); } }
-        .export-option { background: transparent; border: none; color: #fff; text-align: left; padding: 10px 12px; font-size: 11px; border-radius: 6px; cursor: pointer; }
-        .export-option:hover { background: #1c1c1f; }
+        /* Controls */
+        .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        input[type="range"] { -webkit-appearance: none; background: #333; height: 2px; width: 100px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #fff; border-radius: 50%; }
         
-        .section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
-        .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; letter-spacing: 1px; }
-        .control-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; width: 100%; }
-        .label { font-size: 11px; color: var(--text-muted); }
-        .control-group { display: flex; align-items: center; gap: 10px; flex-grow: 1; justify-content: flex-end; }
-        .zoom-info { position: absolute; top: calc(15px + env(safe-area-inset-top)); left: 15px; background: var(--bg-panel); padding: 0 14px; height: 34px; display: flex; align-items: center; border-radius: 20px; font-size: 10px; border: 1px solid var(--border); z-index: 5; }
-        .fab { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-panel); border: 1px solid var(--border); cursor: pointer; color: #fff; }
-        .fab:hover { background: #222; }
-        
-        /* Inputs & Switches */
-        .switch { position: relative; display: inline-block; width: 32px; height: 18px; }
+        /* Toggle Switch */
+        .switch { position: relative; width: 32px; height: 18px; display: inline-block; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #3f3f46; transition: .3s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; }
+        .slider { position: absolute; inset: 0; background-color: #333; border-radius: 20px; transition: .3s; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: .3s; }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(14px); background-color: #000; }
-        input[type="color"] { -webkit-appearance: none; border: 1px solid var(--border); background: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
-        input[type="range"] { -webkit-appearance: none; height: 2px; background: var(--border); width: 85px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #fff; border-radius: 50%; border: 1px solid var(--border); transition: transform 0.1s; }
-        input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.3); background: var(--accent); border-color: var(--accent); }
-        input[type="number"] { background: transparent; border: none; color: var(--text-main); font-size: 11px; text-align: right; width: 35px; -moz-appearance: textfield; }
         
-        .designer-footer { margin: 20px; padding: 20px; background: #161618; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
-        .footer-text { font-size: 11px; line-height: 1.6; color: var(--text-muted); margin-bottom: 12px; }
-        .version-tag { font-size: 9px; font-weight: 700; color: #3f3f46; text-transform: uppercase; letter-spacing: 1px; }
-        .credit-badge { position: fixed; right: 20px; z-index: 1000; background: #fff; color: #000; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 11px; text-decoration: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); transition: transform 0.2s; }
-        .credit-badge:hover { transform: translateY(-2px); }
-        .reset-btn { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; transition: color 0.2s; }
-        .reset-btn:hover { color: var(--accent); }
+        #zoom-badge { position: absolute; top: 20px; left: 20px; background: #111; border: 1px solid #333; color: #fff; font-size: 10px; padding: 4px 12px; border-radius: 20px; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div id="auth-layer">
-    <div class="auth-card">
-        <div class="auth-logo">METASTAR</div>
-        <div class="auth-desc" id="auth-subtitle">Professional Studio Access</div>
-        
-        <div style="overflow: hidden;">
-            <div class="step-container" id="step-slider">
-                <div class="step" id="step-email">
-                    <div class="input-group">
-                        <input type="email" id="email-input" class="auth-input" placeholder="whop@email.com">
-                    </div>
-                    <button onclick="requestOtp()" id="btn-otp" class="auth-btn">
-                        <span>Send Access Code</span>
-                        <div class="spinner"></div>
-                    </button>
-                </div>
-
-                <div class="step inactive" id="step-verify">
-                    <div class="input-group">
-                        <input type="text" id="code-input" class="auth-input" placeholder="123 456" maxlength="6" style="letter-spacing: 3px; text-align:center; font-weight:600;">
-                    </div>
-                    <button onclick="verifyOtp()" id="btn-verify" class="auth-btn">
-                        <span>Verify & Launch</span>
-                        <div class="spinner"></div>
-                    </button>
-                    <div class="helper-link" onclick="resetAuthUI()">Wrong email address?</div>
-                </div>
+    <div id="auth-layer">
+        <div class="auth-card">
+            <div class="auth-logo">METASTAR</div>
+            <div class="auth-desc" id="auth-sub">Professional Studio Access</div>
+            
+            <div id="step-email" class="step active">
+                <input type="email" id="email-in" class="auth-input" placeholder="whop@email.com">
+                <button id="btn-otp" class="auth-btn">Send Access Code</button>
             </div>
-        </div>
 
-        <div id="status-msg"></div>
-    </div>
-</div>
-
-<div id="main-ui">
-    <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge" id="badge">
-        
-        <span class="full-text">Made by Pvrplxd</span>
-    </a>
-
-    <div id="export-trigger-wrap">
-        <button class="fab" onclick="toggleExportMenu()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
-        </button>
-        <div class="export-pop" id="exportPop">
-            <button class="export-option" onclick="exportImg('png')">Save PNG</button>
-            <button class="export-option" onclick="exportImg('jpg')">Save JPG</button>
-            <button class="export-option" style="color:var(--accent)" onclick="exportSVG()">Export SVG</button>
+            <div id="step-verify" class="step">
+                <input type="text" id="code-in" class="auth-input" placeholder="123 456" style="text-align:center; letter-spacing: 3px;">
+                <button id="btn-verify" class="auth-btn">Verify & Launch</button>
+            </div>
+            <div id="auth-error" style="color:#ff4444; font-size:12px; margin-top:12px;"></div>
         </div>
     </div>
 
-    <aside id="sidebar">
-        <div id="sheet-handle"></div>
-        <div class="sidebar-header" id="drag-trigger">
-            METASTAR
-            <button class="reset-btn" onclick="resetSettings()">↺</button>
-        </div>
-        
-        <div class="sidebar-content">
-            <div class="section">
-                <div class="section-title">Geometry</div>
-                <div class="control-row"><span class="label">Top</span><div class="control-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div></div>
-                <div class="control-row"><span class="label">Right</span><div class="control-group"><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r"></div></div>
-                <div class="control-row"><span class="label">Bottom</span><div class="control-group"><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b"></div></div>
-                <div class="control-row"><span class="label">Left</span><div class="control-group"><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l"></div></div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Transformation</div>
-                <div class="control-row"><span class="label">Skew X</span><div class="control-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div></div>
-                <div class="control-row"><span class="label">Skew Y</span><div class="control-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div></div>
-                <div class="control-row"><span class="label">Scale</span><div class="control-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div></div>
-                <div class="control-row"><span class="label">Curve</span><div class="control-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div></div>
-            </div>
-
-            <div class="section">
-                <div class="section-title">Appearance</div>
+    <div id="main-ui">
+        <aside id="sidebar">
+            <div id="sheet-handle"></div>
+            <div class="sidebar-content">
+                <div class="control-row"><span class="label">Top</span><input type="range" id="t" min="10" max="600" value="100"></div>
+                <div class="control-row"><span class="label">Right</span><input type="range" id="r" min="10" max="600" value="100"></div>
+                <div class="control-row"><span class="label">Bottom</span><input type="range" id="b" min="10" max="600" value="100"></div>
+                <div class="control-row"><span class="label">Left</span><input type="range" id="l" min="10" max="600" value="100"></div>
+                <hr style="border:0; border-top:1px solid #222; margin: 20px 0;">
+                
+                <div class="control-row"><span class="label">Skew X</span><input type="range" id="sx" min="-100" max="100" value="0"></div>
+                <div class="control-row"><span class="label">Skew Y</span><input type="range" id="sy" min="-100" max="100" value="0"></div>
+                <div class="control-row"><span class="label">Curve</span><input type="range" id="c" min="0" max="100" value="25"></div>
+                
+                <hr style="border:0; border-top:1px solid #222; margin: 20px 0;">
+                
                 <div class="control-row">
-                    <span class="label">Show Grid</span>
-                    <button id="btnGrid" style="display:none"></button> 
-                    <label class="switch"><input type="checkbox" id="checkGrid" checked><span class="slider"></span></label>
+                    <span class="label">Grid</span>
+                    <label class="switch"><input type="checkbox" id="check-grid" checked><span class="slider"></span></label>
                 </div>
                 <div class="control-row">
-                    <span class="label">Bones</span>
-                    <label class="switch"><input type="checkbox" id="checkBones"><span class="slider"></span></label>
-                    <button id="btnBones" style="display:none"></button>
+                    <span class="label">Bones Mode</span>
+                    <label class="switch"><input type="checkbox" id="check-bones"><span class="slider"></span></label>
                 </div>
-                <div class="control-row"><span class="label">Star Color</span><input type="color" id="starCol" value="#dfff00"></div>
-                <div class="control-row"><span class="label">Background</span><input type="color" id="bgCol" value="#09090b"></div>
-            </div>
-
-            <div class="designer-footer">
-                <div class="footer-text">
-                    This tool was built by a designer, exclusively for designers who value and find joy in the creative process.
+                <div class="control-row">
+                    <span class="label">Star Color</span>
+                    <input type="color" id="col-star" value="#dfff00" style="background:none; border:none; width:24px; height:24px;">
                 </div>
-                <div class="version-tag">MetaStar Studio v1.0</div>
             </div>
-        </div>
-    </aside>
+        </aside>
 
-    <main id="viewport">
-        <div class="zoom-info" id="zoomBadge">Scale: 100%</div>
-        <canvas id="canvas"></canvas>
-    </main>
-</div>
+        <main id="viewport">
+            <div id="zoom-badge">Scale: 100%</div>
+            <canvas id="canvas"></canvas>
+        </main>
+    </div>
 
-<script>
-    const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev";
-    let userEmail = "";
-
-    // --- UI HELPERS ---
-    function setStatus(msg, isError = false) {
-        const el = document.getElementById('status-msg');
-        el.innerText = msg;
-        el.classList.add('visible');
-        el.style.color = isError ? '#ff6b6b' : '#888';
-        
-        if(isError) {
-            // Shake animation for error
-            const input = document.querySelector(document.getElementById('step-email').classList.contains('inactive') ? '#code-input' : '#email-input');
-            input.parentElement.classList.add('shake');
-            setTimeout(() => input.parentElement.classList.remove('shake'), 500);
-        }
-    }
-
-    function toggleLoading(btnId, isLoading) {
-        const btn = document.getElementById(btnId);
-        if(isLoading) {
-            btn.classList.add('loading');
-            btn.disabled = true;
-        } else {
-            btn.classList.remove('loading');
-            btn.disabled = false;
-        }
-    }
-
-    function slideToVerify() {
-        document.getElementById('step-slider').style.transform = 'translateX(-50%)';
-        document.getElementById('step-email').classList.add('inactive');
-        document.getElementById('step-verify').classList.remove('inactive');
-        document.getElementById('auth-subtitle').innerText = "Check your inbox for the code";
-        setTimeout(() => document.getElementById('code-input').focus(), 400);
-    }
-
-    function resetAuthUI() {
-        document.getElementById('step-slider').style.transform = 'translateX(0)';
-        document.getElementById('step-email').classList.remove('inactive');
-        document.getElementById('step-verify').classList.add('inactive');
-        document.getElementById('auth-subtitle').innerText = "Professional Studio Access";
-        document.getElementById('status-msg').classList.remove('visible');
-        document.getElementById('email-input').focus();
-    }
-
-    // --- AUTH LOGIC ---
-    async function checkSession() {
-        const savedToken = localStorage.getItem('ms_token');
-        if (!savedToken) return;
-
-        // Auto-login UI state
-        toggleLoading('btn-otp', true); 
-        document.getElementById('auth-subtitle').innerText = "Resuming session...";
-
-        try {
-            const res = await fetch(`${WORKER_URL}/auth/validate`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${savedToken}` }
-            });
-            const data = await res.json();
-
-            if (res.ok && data.valid) {
-                loadCore(savedToken);
-            } else {
-                throw new Error("Expired");
-            }
-        } catch (e) {
-            localStorage.removeItem('ms_token');
-            toggleLoading('btn-otp', false);
-            document.getElementById('auth-subtitle').innerText = "Session expired. Login again.";
-        }
-    }
-
-    async function requestOtp() {
-        const email = document.getElementById('email-input').value.trim();
-        if (!email) return setStatus("Email is required", true);
-        
-        userEmail = email;
-        toggleLoading('btn-otp', true);
-        setStatus("");
-
-        try {
-            const res = await fetch(`${WORKER_URL}/auth/init`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json();
-            
-            toggleLoading('btn-otp', false);
-            if (!res.ok) throw new Error(data.message);
-            
-            slideToVerify();
-        } catch (e) {
-            toggleLoading('btn-otp', false);
-            setStatus(e.message, true);
-        }
-    }
-
-    async function verifyOtp() {
-        const code = document.getElementById('code-input').value.trim();
-        if (code.length < 6) return setStatus("Invalid code", true);
-
-        toggleLoading('btn-verify', true);
-        setStatus("");
-
-        try {
-            const res = await fetch(`${WORKER_URL}/auth/verify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: userEmail, code })
-            });
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.message);
-
-            localStorage.setItem('ms_token', data.token);
-            loadCore(data.token);
-
-        } catch (e) {
-            toggleLoading('btn-verify', false);
-            setStatus(e.message, true);
-        }
-    }
-
-    function loadCore(token) {
-        fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => res.text()).then(code => {
-            const s = document.createElement('script'); s.textContent = code; document.body.appendChild(s);
-            
-            // Fade out auth layer
-            const layer = document.getElementById('auth-layer');
-            layer.style.opacity = '0';
-            layer.style.pointerEvents = 'none';
-            setTimeout(() => { layer.style.display = 'none'; }, 500);
-
-            document.getElementById('main-ui').style.opacity = '1'; 
-            document.getElementById('main-ui').style.pointerEvents = 'all';
-            
-            initGestures();
-            setupBridges();
-            if (window.innerWidth <= 768) initProBottomSheet();
-        });
-    }
-
-    function setupBridges() {
-        document.getElementById('checkGrid').addEventListener('change', (e) => {
-            if(window.toggleGrid) window.toggleGrid(e.target.checked);
-        });
-        document.getElementById('bgCol').addEventListener('input', (e) => {
-            const c = e.target.value;
-            const hex = parseInt(c.replace('#',''), 16);
-            const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
-            const lum = 0.2126*r + 0.7152*g + 0.0722*b;
-            if(window.setGridColor) window.setGridColor(lum < 128 ? '#ffffff' : '#000000');
-        });
-    }
-
-    function toggleExportMenu() { document.getElementById('exportPop').classList.toggle('active'); }
-
-    function initGestures() {
-        const viewport = document.getElementById('viewport');
-        let currentScale = 100;
-        interact(viewport).gesturable({
-            listeners: {
-                move(event) {
-                    currentScale *= event.ds;
-                    if(currentScale < 10) currentScale = 10;
-                    if(currentScale > 400) currentScale = 400;
-                    const zInput = document.getElementById('r-z');
-                    const nInput = document.getElementById('n-z');
-                    if(zInput) {
-                        zInput.value = Math.round(currentScale);
-                        nInput.value = Math.round(currentScale);
-                        zInput.dispatchEvent(new Event('input'));
-                    }
-                    document.getElementById('zoomBadge').innerText = `Scale: ${Math.round(currentScale)}%`;
-                }
-            }
-        });
-    }
-
-    function initProBottomSheet() {
-        const sheet = document.getElementById('sidebar');
-        const vh = window.innerHeight;
-        const CLOSED = vh - 58;
-        const MID = vh * 0.45;
-        const FULL = 0;
-        let yPos = CLOSED;
-
-        interact(sheet).draggable({
-            allowFrom: '#drag-trigger, #sheet-handle',
-            inertia: true,
-            listeners: {
-                move(event) {
-                    yPos += event.dy;
-                    if (yPos < 0) yPos = 0;
-                    if (yPos > CLOSED) yPos = CLOSED;
-                    sheet.style.transform = `translateY(${yPos - CLOSED}px)`;
-                    document.documentElement.style.setProperty('--badge-opacity', `${1 - ((1 - (yPos/CLOSED)) * 3)}`);
-                },
-                end() {
-                    const snapPoints = [FULL, MID, CLOSED];
-                    const closest = snapPoints.reduce((prev, curr) => Math.abs(curr - yPos) < Math.abs(prev - yPos) ? curr : prev);
-                    yPos = closest;
-                    sheet.style.transition = 'transform 0.4s cubic-bezier(0.19, 1, 0.22, 1)';
-                    sheet.style.transform = `translateY(${yPos - CLOSED}px)`;
-                    setTimeout(() => { sheet.style.transition = ''; }, 400);
-                }
-            }
-        });
-    }
-
-    document.getElementById('email-input').addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp() });
-    document.getElementById('code-input').addEventListener('keypress', (e) => { if(e.key==='Enter') verifyOtp() });
-    window.onload = checkSession;
-</script>
+    <script>
+        // Only points to Auth. JS execution happens there.
+        const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev";
+        const script = document.createElement('script');
+        script.src = `${WORKER_URL}/auth.js?t=${Date.now()}`;
+        document.body.appendChild(script);
+    </script>
 </body>
 </html>
