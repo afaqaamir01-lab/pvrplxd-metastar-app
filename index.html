@@ -26,27 +26,16 @@
         #auth-layer { 
             position: fixed; inset: 0; z-index: 10000; 
             display: flex; align-items: center; justify-content: center; 
-            background: radial-gradient(circle at 50% 10%, #1a1a20 0%, #09090b 80%);
-            transition: opacity 0.5s ease, backdrop-filter 0.5s;
-        }
-        
-        /* Subtle animated background mesh */
-        #auth-layer::before {
-            content: ''; position: absolute; inset: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23222' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            opacity: 0.5; pointer-events: none;
+            background: #000000;
+            transition: opacity 0.5s ease;
         }
 
         .auth-card { 
-            position: relative;
-            background: rgba(17, 17, 19, 0.7); 
+            background: rgba(17, 17, 19, 0.8); 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            padding: 48px 40px; 
-            border: 1px solid rgba(255,255,255,0.08); 
+            padding: 48px 40px; border: 1px solid rgba(255,255,255,0.08); 
             border-radius: 24px; width: 360px; text-align: center; 
-            box-shadow: 0 25px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.05);
-            overflow: hidden;
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
         }
 
         .auth-logo {
@@ -171,8 +160,8 @@
 
 <div id="auth-layer">
     <div class="auth-card">
-        <div class="auth-logo">METASTAR</div>
-        <div class="auth-desc" id="auth-subtitle">Professional Studio Access</div>
+        <div class="auth-logo">MetaStar</div>
+        <div class="auth-desc" id="auth-subtitle">Website Access</div>
         
         <div style="overflow: hidden;">
             <div class="step-container" id="step-slider">
