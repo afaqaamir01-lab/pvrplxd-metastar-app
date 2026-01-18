@@ -1,1 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Access Restricted</title>
+<style>
+:root {
+  --border: #222;
+  --text-muted: #8a8a8a;
+  --bg-box: #161618;
+}
 
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  font-family: -apple-system, system-ui, Inter, Arial, sans-serif;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.designer-footer {
+  padding: 28px 30px;
+  background: var(--bg-box);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 460px;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+}
+
+.icon-wrap {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.02);
+}
+
+.icon-wrap svg {
+  width: 20px;
+  height: 20px;
+  stroke: #8a8a8a;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  color: #e5e5e5;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.footer-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .designer-footer {
+    padding: 22px 24px;
+    gap: 12px;
+  }
+
+  .icon-wrap {
+    width: 34px;
+    height: 34px;
+  }
+
+  .icon-wrap svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .title {
+    font-size: 14px;
+  }
+
+  .footer-text {
+    font-size: 11px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="designer-footer">
+  <div class="icon-wrap">
+    <!-- Minimal outline lock icon -->
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+    </svg>
+  </div>
+
+  <div class="content">
+    <div class="title">Access Restricted</div>
+    <div class="footer-text">
+      You do not have permission to access this website.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
