@@ -5,20 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MetaStar Studio Pro</title>
     
-    <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- GSAP Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/InertiaPlugin.min.js"></script>
     
     <style>
         :root {
-            --bg-canvas: #09090b; --bg-panel: #111113; --border: #27272a;
-            --text-main: #e4e4e7; --text-muted: #71717a; --accent: #dfff00;
-            --input-bg: #18181b; --sidebar-width: 320px;
-            --safe-top: env(safe-area-inset-top);
+            --bg-canvas: #09090b; 
+            --bg-panel: rgba(17, 17, 19, 0.85); 
+            --border: rgba(255,255,255,0.08);
+            --text-main: #e4e4e7; 
+            --text-muted: #71717a; 
+            --accent: #dfff00;
+            --sidebar-width: 340px;
+            --dock-height: 64px;
         }
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         
@@ -28,7 +31,7 @@
             font-size: 13px; overscroll-behavior: none; user-select: none;
         }
 
-        /* --- AUTH LAYER --- */
+        /* --- AUTH LAYER (Unchanged for stability) --- */
         #auth-layer { 
             position: fixed; inset: 0; z-index: 10000; 
             display: flex; align-items: center; justify-content: center; 
@@ -55,128 +58,203 @@
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .auth-btn:active { transform: scale(0.98); }
-        
-        /* Spinner */
         .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-left-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
         .auth-btn.loading .spinner { display: block; } .auth-btn.loading span { display: none; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* Step Slider */
         .step-container { display: flex; width: 200%; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .step { width: 50%; padding: 4px; opacity: 1; transition: opacity 0.3s; flex-shrink: 0; }
         .step.inactive { opacity: 0; pointer-events: none; }
-        
         #status-msg { height: 20px; margin-top: 12px; font-size: 12px; color: #ff4444; opacity: 0; transition: 0.3s; }
         #status-msg.visible { opacity: 1; }
 
         /* --- APP UI --- */
-        #main-ui { opacity: 0; pointer-events: none; width: 100%; height: 100%; display: flex; }
+        #main-ui { opacity: 0; pointer-events: none; width: 100%; height: 100%; position: relative; }
         
-        /* Sidebar */
-        #sidebar { 
-            width: var(--sidebar-width); background: var(--bg-panel); border-right: 1px solid var(--border); 
-            display: flex; flex-direction: column; z-index: 100; flex-shrink: 0;
+        /* Viewport & Canvas */
+        #viewport { 
+            width: 100%; height: 100%; position: relative; overflow: hidden; 
+            background: var(--bg-canvas); 
+            /* Critical for Zoom gestures */
+            touch-action: none; 
+            cursor: grab; 
         }
-        .sidebar-header { 
-            padding: 18px 20px; font-weight: 700; font-size: 15px; border-bottom: 1px solid var(--border); 
-            display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); 
-        }
-        .sidebar-content { flex-grow: 1; overflow-y: auto; padding-bottom: 40px; }
-        
-        /* Viewport */
-        #viewport { flex-grow: 1; position: relative; overflow: hidden; background: var(--bg-canvas); cursor: grab; }
         #viewport:active { cursor: grabbing; }
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* Controls */
-        .section { padding: 20px; border-bottom: 1px solid var(--border); }
-        .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
-        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .control-row:last-child { margin-bottom: 0; }
-        .label { font-size: 12px; color: var(--text-muted); }
+        /* --- DESKTOP DOCK --- */
+        #dock-container {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px; z-index: 200;
+        }
         
-        /* Custom Inputs */
-        input[type="range"] { -webkit-appearance: none; height: 4px; background: #27272a; border-radius: 2px; flex-grow: 1; margin: 0 12px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer; transition: 0.1s; }
-        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
-        
-        .val-display { background: transparent; border: 1px solid var(--border); color: var(--text-main); font-size: 11px; width: 40px; padding: 4px; text-align: center; border-radius: 4px; font-family: 'Space Grotesk', monospace; }
-        
-        /* Color & Toggles */
-        input[type="color"] { -webkit-appearance: none; border: none; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); border-radius: 50%; }
+        .dock-bar {
+            background: rgba(20, 20, 22, 0.8); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            padding: 8px; display: flex; align-items: center; gap: 4px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
 
+        .dock-btn {
+            width: 44px; height: 44px; border-radius: 14px; border: none;
+            background: transparent; color: #999; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s; position: relative;
+        }
+        .dock-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .dock-btn.active { background: #fff; color: #000; box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
+
+        /* --- CONTROL PANEL (Hybrid: Popover on Desktop, Sheet on Mobile) --- */
+        #control-panel {
+            position: fixed; z-index: 150;
+            background: var(--bg-panel); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow: hidden;
+            
+            /* Desktop Initial State */
+            bottom: 100px; left: 50%; transform: translateX(-50%) scale(0.95);
+            width: 340px; max-height: 70vh; opacity: 0; pointer-events: none;
+            border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            transform-origin: bottom center;
+        }
+        
+        #panel-content { 
+            overflow-y: auto; flex-grow: 1; padding: 0;
+            /* Hide scrollbar */
+            -ms-overflow-style: none; scrollbar-width: none;
+        }
+        #panel-content::-webkit-scrollbar { display: none; }
+
+        /* Mobile Handle & Header */
+        .mobile-header { display: none; padding: 0 24px 20px 24px; flex-direction: column; }
+        .sheet-handle { 
+            width: 36px; height: 4px; background: rgba(255,255,255,0.2); 
+            border-radius: 2px; margin: 12px auto 20px auto; 
+        }
+        .header-row { display: flex; justify-content: space-between; align-items: center; }
+        .brand-text { font-weight: 800; font-size: 14px; letter-spacing: 1px; color: #fff; }
+        .reset-text { font-size: 11px; font-weight: 600; color: var(--accent); cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 0;}
+
+        /* Controls */
+        .section { padding: 24px; border-bottom: 1px solid var(--border); }
+        .section-title { 
+            font-size: 11px; font-weight: 700; text-transform: uppercase; 
+            color: var(--text-muted); margin-bottom: 16px; 
+            display: flex; align-items: center; gap: 8px; letter-spacing: 1px;
+        }
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .control-row:last-child { margin-bottom: 0; }
+        .label { font-size: 13px; color: #ccc; font-weight: 400; }
+        
+        /* Inputs */
+        input[type="range"] { 
+            -webkit-appearance: none; height: 4px; background: rgba(255,255,255,0.1); 
+            border-radius: 2px; flex-grow: 1; margin: 0 16px; 
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; width: 14px; height: 14px; background: #fff; 
+            border-radius: 50%; cursor: pointer; transition: 0.1s; border: 2px solid #000;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        
+        .val-display { 
+            background: transparent; border: 1px solid rgba(255,255,255,0.15); 
+            color: var(--text-main); font-size: 11px; width: 42px; padding: 6px 0; 
+            text-align: center; border-radius: 6px; font-family: 'Space Grotesk', monospace; 
+        }
+
+        /* Footer Card */
+        .footer-card {
+            margin: 24px; padding: 16px; background: rgba(255,255,255,0.03);
+            border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+            display: flex; gap: 12px; align-items: flex-start;
+        }
+        .footer-text { font-size: 11px; line-height: 1.5; color: #888; }
+        .footer-text strong { color: #eee; display: block; margin-bottom: 2px; }
+
+        /* Toggles & Colors */
+        input[type="color"] { -webkit-appearance: none; border: none; width: 28px; height: 28px; border-radius: 50%; padding: 0; cursor: pointer; background: none; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; }
+        
         .switch { position: relative; width: 36px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #27272a; transition: .3s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: #71717a; transition: .3s; border-radius: 50%; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #333; transition: .3s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: #777; transition: .3s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(16px); background-color: #000; }
 
-        /* Floating UI */
+        /* Floating UI Elements */
         .float-ui { position: absolute; z-index: 10; display: flex; gap: 8px; }
-        #zoom-controls { bottom: 20px; left: 20px; background: var(--bg-panel); padding: 4px; border-radius: 12px; border: 1px solid var(--border); align-items: center; }
-        #zoom-val { font-size: 12px; width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
         
-        .icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: #fff; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .icon-btn:hover { background: rgba(255,255,255,0.1); }
+        #zoom-controls { 
+            bottom: 30px; left: 30px; background: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(10px); padding: 6px; border-radius: 16px; 
+            border: 1px solid rgba(255,255,255,0.1); align-items: center; 
+        }
+        #zoom-val { font-size: 12px; width: 44px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 500;}
+        
+        .icon-btn { 
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; 
+            background: transparent; border: none; color: #fff; border-radius: 10px; 
+            cursor: pointer; transition: 0.2s; 
+        }
+        .icon-btn:hover { background: rgba(255,255,255,0.15); }
 
-        #export-menu { top: 20px; right: 20px; }
+        #export-menu { top: 30px; right: 30px; }
         .export-dropdown { 
-            position: absolute; top: 40px; right: 0; width: 140px; 
-            background: var(--bg-panel); border: 1px solid var(--border); 
-            border-radius: 12px; padding: 6px; display: none; flex-direction: column; gap: 2px;
+            position: absolute; top: 46px; right: 0; width: 150px; 
+            background: #18181b; border: 1px solid var(--border); 
+            border-radius: 16px; padding: 6px; display: none; flex-direction: column; gap: 2px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5); transform-origin: top right;
         }
-        .export-item { padding: 10px; text-align: left; background: none; border: none; color: #eee; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .export-item:hover { background: #27272a; }
+        .export-item { padding: 10px 12px; text-align: left; background: none; border: none; color: #ccc; font-size: 13px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+        .export-item:hover { background: #27272a; color: #fff; }
 
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            #main-ui { flex-direction: column; }
-            #sidebar { 
-                position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-                background: var(--bg-panel); z-index: 200;
-                transform: translateY(calc(100vh - 60px)); /* Initial closed state */
-                border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-                border-top: 1px solid rgba(255,255,255,0.1);
-            }
-            .sidebar-header { justify-content: center; position: relative; padding: 10px; }
-            #sheet-handle { width: 40px; height: 4px; background: #3f3f46; border-radius: 2px; margin: 5px auto; }
-            #viewport { height: 100vh; width: 100vw; }
-            .credit-badge { display: none; } /* Hide on mobile for space */
-            #export-menu { top: calc(var(--safe-top) + 10px); }
+        .credit-badge { 
+            position: absolute; bottom: 30px; right: 30px; 
+            background: #fff; color: #000; padding: 8px 16px;
+            border-radius: 30px; font-size: 12px; font-weight: 700;
+            text-decoration: none; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease; z-index: 50;
         }
+        .credit-badge:hover { transform: scale(1.05); }
 
-        .credit-badge { position: absolute; bottom: 20px; right: 20px; color: #555; font-size: 11px; text-decoration: none; opacity: 0.6; transition: 0.2s; }
-        .credit-badge:hover { opacity: 1; color: var(--accent); }
+        /* --- MOBILE OVERRIDES --- */
+        @media (max-width: 768px) {
+            #dock-container { display: none; }
+            .credit-badge { display: none; }
+            #zoom-controls { display: none; } /* Pinch zoom preferred on mobile */
+            #export-menu { top: calc(env(safe-area-inset-top) + 20px); right: 20px; }
+            
+            #control-panel {
+                width: 100%; bottom: 0; left: 0; transform: none; height: 85vh;
+                border-radius: 24px 24px 0 0; opacity: 1; pointer-events: auto;
+                background: #111113; border-bottom: none;
+                transform: translateY(calc(100% - 100px)); /* Peeking state */
+            }
+            .mobile-header { display: flex; }
+            /* Hide the Desktop Reset in header, we use mobile header one */
+            .desktop-reset { display: none; }
+        }
     </style>
 </head>
 <body>
 
-<!-- AUTH UI -->
 <div id="auth-layer">
     <div class="auth-card">
         <div class="auth-logo">MetaStar</div>
         <div class="auth-desc" id="auth-subtitle">Professional Studio Access</div>
-        
         <div style="overflow: hidden;">
             <div class="step-container" id="step-slider">
-                <!-- Step 1: Email -->
                 <div class="step" id="step-email">
                     <input type="email" id="email-input" class="auth-input" placeholder="name@example.com">
                     <button onclick="requestOtp()" id="btn-otp" class="auth-btn">
-                        <span>Send Access Code</span>
-                        <div class="spinner"></div>
+                        <span>Send Access Code</span><div class="spinner"></div>
                     </button>
                 </div>
-                <!-- Step 2: Code -->
                 <div class="step inactive" id="step-verify">
                     <input type="text" id="code-input" class="auth-input" placeholder="123 456" maxlength="6" style="text-align:center; letter-spacing:4px; font-weight:700;">
                     <button onclick="verifyOtp()" id="btn-verify" class="auth-btn">
-                        <span>Verify & Launch</span>
-                        <div class="spinner"></div>
+                        <span>Verify & Launch</span><div class="spinner"></div>
                     </button>
                     <div style="margin-top:15px; font-size:12px; text-decoration:underline; cursor:pointer; color:#666;" onclick="resetAuthUI()">Change Email</div>
                 </div>
@@ -186,48 +264,52 @@
     </div>
 </div>
 
-<!-- MAIN UI -->
 <div id="main-ui">
-    <!-- Tools & Canvas -->
     <div id="viewport">
         <canvas id="canvas"></canvas>
         
-        <!-- Zoom Controls -->
         <div class="float-ui" id="zoom-controls">
             <button class="icon-btn" onclick="zoomOut()"><i data-lucide="minus" width="14"></i></button>
             <div id="zoom-val">100%</div>
             <button class="icon-btn" onclick="zoomIn()"><i data-lucide="plus" width="14"></i></button>
         </div>
 
-        <!-- Export Menu -->
         <div class="float-ui" id="export-menu">
             <button class="icon-btn" style="background:var(--bg-panel); border:1px solid var(--border)" onclick="toggleExport()">
                 <i data-lucide="download" width="16"></i>
             </button>
             <div class="export-dropdown" id="export-list">
-                <button class="export-item" onclick="exportFile('png')"><i data-lucide="image" width="14"></i> Save PNG</button>
-                <button class="export-item" onclick="exportFile('jpg')"><i data-lucide="image" width="14"></i> Save JPG</button>
-                <button class="export-item" style="color:var(--accent)" onclick="exportFile('svg')"><i data-lucide="code" width="14"></i> Export SVG</button>
+                <button class="export-item" onclick="exportFile('png')"><i data-lucide="image" width="14"></i> PNG</button>
+                <button class="export-item" onclick="exportFile('jpg')"><i data-lucide="image" width="14"></i> JPG</button>
+                <button class="export-item" style="color:var(--accent)" onclick="exportFile('svg')"><i data-lucide="code" width="14"></i> SVG</button>
             </div>
         </div>
         
         <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">Made by Pvrplxd</a>
     </div>
 
-    <!-- Controls Sidebar -->
-    <aside id="sidebar">
-        <div class="sidebar-header" id="drag-handle">
-            <div id="sheet-handle"></div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <i data-lucide="command" width="16" color="var(--accent)"></i> 
-                <span>METASTAR</span>
-            </div>
-            <button class="icon-btn" onclick="resetSettings()" title="Reset">
-                <i data-lucide="rotate-ccw" width="14"></i>
+    <div id="dock-container">
+        <div class="dock-bar">
+            <button class="dock-btn active" id="btn-toggle-panel" onclick="toggleDesktopPanel()" title="Parameters">
+                <i data-lucide="sliders-horizontal" width="20"></i>
+            </button>
+            <div style="width:1px; height:24px; background:rgba(255,255,255,0.1); margin:0 4px;"></div>
+            <button class="dock-btn" onclick="resetSettings()" title="Reset All">
+                <i data-lucide="rotate-ccw" width="18"></i>
             </button>
         </div>
+    </div>
+
+    <aside id="control-panel">
+        <div class="mobile-header" id="drag-handle">
+            <div class="sheet-handle"></div>
+            <div class="header-row">
+                <div class="brand-text">METASTAR</div>
+                <div class="reset-text" onclick="resetSettings()">RESET</div>
+            </div>
+        </div>
         
-        <div class="sidebar-content">
+        <div id="panel-content">
             <div class="section">
                 <div class="section-title"><i data-lucide="box" width="12"></i> Geometry</div>
                 <div class="control-row"><span class="label">Top</span><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t" class="val-display"></div>
@@ -240,7 +322,6 @@
                 <div class="section-title"><i data-lucide="move-3d" width="12"></i> Transform</div>
                 <div class="control-row"><span class="label">Skew X</span><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx" class="val-display"></div>
                 <div class="control-row"><span class="label">Skew Y</span><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy" class="val-display"></div>
-                <div class="control-row"><span class="label">Scale</span><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z" class="val-display"></div>
                 <div class="control-row"><span class="label">Curve</span><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c" class="val-display"></div>
             </div>
 
@@ -257,9 +338,13 @@
                 <div class="control-row"><span class="label">Star Color</span><input type="color" id="starCol" value="#dfff00"></div>
                 <div class="control-row"><span class="label">Background</span><input type="color" id="bgCol" value="#09090b"></div>
             </div>
-            
-            <div style="padding:20px; text-align:center; opacity:0.5; font-size:10px;">
-                MetaStar Studio v1.2 &bull; GSAP Powered
+
+            <div class="footer-card">
+                <i data-lucide="sparkles" width="16" color="var(--accent)"></i>
+                <div class="footer-text">
+                    <strong>Creative Flow</strong>
+                    Built exclusively for designers who find joy in the process. Experiment, iterate, and create.
+                </div>
             </div>
         </div>
     </aside>
@@ -268,6 +353,7 @@
 <script>
     const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev";
     let userEmail = "";
+    let isDesktopPanelOpen = false;
 
     // --- UI LOGIC ---
     function toggleExport() { 
@@ -282,30 +368,61 @@
         }
     }
 
+    function toggleDesktopPanel() {
+        if(window.innerWidth <= 768) return; // Mobile handled by Draggable
+        
+        const panel = document.getElementById('control-panel');
+        const btn = document.getElementById('btn-toggle-panel');
+        
+        isDesktopPanelOpen = !isDesktopPanelOpen;
+        
+        if(isDesktopPanelOpen) {
+            gsap.to(panel, { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "back.out(1.2)" });
+            panel.style.pointerEvents = "all";
+            btn.classList.add('active');
+        } else {
+            gsap.to(panel, { opacity: 0, scale: 0.95, y: 20, duration: 0.3 });
+            panel.style.pointerEvents = "none";
+            btn.classList.remove('active');
+        }
+    }
+
     function initGSAP() {
         lucide.createIcons();
         
-        // Mobile Bottom Sheet Logic
+        // Mobile Bottom Sheet Logic with Snapping
         if (window.innerWidth <= 768) {
-            Draggable.create("#sidebar", {
+            const panel = document.getElementById('control-panel');
+            const h = window.innerHeight;
+            const closedY = h - 100; // Visible header
+            const openY = h * 0.15; // Top padding
+            
+            // Set initial state
+            gsap.set(panel, { y: closedY });
+
+            Draggable.create(panel, {
                 type: "y",
-                bounds: { minY: 0, maxY: window.innerHeight - 60 },
+                bounds: { minY: openY, maxY: closedY },
                 inertia: true,
                 trigger: "#drag-handle",
-                edgeResistance: 0.8,
+                edgeResistance: 0.7,
                 onDragEnd: function() {
                     const y = this.y;
-                    const h = window.innerHeight;
-                    const snapPoints = [0, h * 0.45, h - 60];
-                    const closest = snapPoints.reduce((prev, curr) => Math.abs(curr - y) < Math.abs(prev - y) ? curr : prev);
+                    // Snap logic: if dragged up past 2/3 of screen, open. Else close.
+                    const threshold = h * 0.6; 
+                    const targetY = y < threshold ? openY : closedY;
                     
-                    gsap.to(this.target, { y: closest, duration: 0.5, ease: "power3.out" });
+                    gsap.to(this.target, { 
+                        y: targetY, 
+                        duration: 0.5, 
+                        ease: "power3.out" 
+                    });
                 }
             });
         }
     }
 
-    // --- AUTH LOGIC (ROBUST VERSION) ---
+    // --- AUTH LOGIC ---
     async function requestOtp() {
         const email = document.getElementById('email-input').value.trim();
         if(!email) return showStatus("Email is required", true);
@@ -323,11 +440,7 @@
             
             userEmail = email;
             slideStep(1);
-        } catch(e) { 
-            showStatus(e.message, true); 
-        } finally {
-            toggleLoading(false);
-        }
+        } catch(e) { showStatus(e.message, true); } finally { toggleLoading(false); }
     }
 
     async function verifyOtp() {
@@ -338,7 +451,6 @@
         showStatus("");
 
         try {
-            // 1. Verify Code with Worker
             const res = await fetch(`${WORKER_URL}/auth/verify`, {
                 method: 'POST', body: JSON.stringify({ email: userEmail, code })
             });
@@ -346,24 +458,18 @@
             
             if(!res.ok) throw new Error(d.message);
             
-            // 2. Load Core Application (This was likely failing before)
             const coreCode = await fetchCore(d.token);
-            
-            // 3. Inject and Start
             localStorage.setItem('ms_token', d.token);
             injectCore(coreCode);
 
         } catch(e) {
             showStatus(e.message, true);
             localStorage.removeItem('ms_token');
-        } finally {
-            toggleLoading(false);
-        }
+        } finally { toggleLoading(false); }
     }
 
     async function fetchCore(token) {
         const res = await fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if(res.status === 404) throw new Error("System Error: Core file not found in R2.");
         if(!res.ok) throw new Error("Failed to load application.");
         return await res.text();
     }
@@ -377,6 +483,9 @@
         gsap.to("#main-ui", { opacity: 1, duration: 1 });
         document.getElementById('main-ui').style.pointerEvents = 'all';
         initGSAP();
+        
+        // Auto open panel on desktop
+        if(window.innerWidth > 768) toggleDesktopPanel();
     }
 
     function attemptAutoLogin() {
@@ -395,26 +504,16 @@
             .finally(() => toggleLoading(false));
     }
 
-    // --- HELPERS ---
     function toggleLoading(active) {
         const btn = document.querySelector(document.getElementById('step-email').classList.contains('inactive') ? '#btn-verify' : '#btn-otp');
-        if(active) {
-            btn.classList.add('loading');
-            btn.disabled = true;
-        } else {
-            btn.classList.remove('loading');
-            btn.disabled = false;
-        }
+        if(active) { btn.classList.add('loading'); btn.disabled = true; } 
+        else { btn.classList.remove('loading'); btn.disabled = false; }
     }
 
     function showStatus(msg, isError) {
         const el = document.getElementById('status-msg');
-        el.innerText = msg;
-        el.classList.add('visible');
-        el.style.color = isError ? '#ff4444' : '#666';
-        if(isError && msg) {
-             gsap.fromTo(el, {x:-5}, {x:5, duration:0.05, repeat:3, yoyo:true});
-        }
+        el.innerText = msg; el.classList.add('visible'); el.style.color = isError ? '#ff4444' : '#666';
+        if(isError && msg) gsap.fromTo(el, {x:-5}, {x:5, duration:0.05, repeat:3, yoyo:true});
     }
 
     function slideStep(idx) {
@@ -424,8 +523,7 @@
     }
 
     function resetAuthUI() { 
-        slideStep(0); 
-        document.getElementById('status-msg').innerText = ''; 
+        slideStep(0); document.getElementById('status-msg').innerText = ''; 
         document.getElementById('auth-subtitle').innerText = "Professional Studio Access";
     }
 
