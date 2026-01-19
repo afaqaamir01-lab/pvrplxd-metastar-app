@@ -66,8 +66,7 @@
         .step { width: 50%; padding: 4px; opacity: 1; transition: opacity 0.3s; flex-shrink: 0; }
         .step.inactive { opacity: 0; pointer-events: none; }
         
-        #status-msg { height: 20px; margin-top: 12px; font-size: 12px; color: #ff4444; opacity: 0; transition: 0.3s; }
-        #status-msg.visible { opacity: 1; }
+        #status-msg { height: 20px; margin-top: 12px; font-size: 12px; color: #ff4444; opacity: 0; }
 
         /* --- APP UI --- */
         #main-ui { opacity: 0; pointer-events: none; width: 100%; height: 100%; display: flex; }
@@ -266,7 +265,7 @@
 </div>
 
 <script>
-    const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev";
+    const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev"; // Replace with your worker URL
     let userEmail = "";
 
     // --- UI LOGIC ---
@@ -305,40 +304,32 @@
         }
     }
 
-    // --- AUTH LOGIC (ROBUST VERSION) ---
+    // --- AUTH LOGIC (Simplified) ---
     async function requestOtp() {
-        const email = document.getElementById('email-input').value.trim();
-        if(!email) return showStatus("Email is required", true);
+        const email = document.getElementById('email-input').value;
+        if(!email) return alert("Enter email");
         
         toggleLoading(true);
-        showStatus("");
-
         try {
             const res = await fetch(`${WORKER_URL}/auth/init`, {
                 method: 'POST', body: JSON.stringify({ email })
             });
             const d = await res.json();
+            toggleLoading(false);
             
             if(!res.ok) throw new Error(d.message);
             
             userEmail = email;
             slideStep(1);
         } catch(e) { 
-            showStatus(e.message, true); 
-        } finally {
-            toggleLoading(false);
+            toggleLoading(false); document.getElementById('status-msg').innerText = e.message; 
         }
     }
 
     async function verifyOtp() {
-        const code = document.getElementById('code-input').value.trim();
-        if(code.length < 6) return showStatus("Enter 6-digit code", true);
-
+        const code = document.getElementById('code-input').value;
         toggleLoading(true);
-        showStatus("");
-
         try {
-            // 1. Verify Code with Worker
             const res = await fetch(`${WORKER_URL}/auth/verify`, {
                 method: 'POST', body: JSON.stringify({ email: userEmail, code })
             });
@@ -346,90 +337,48 @@
             
             if(!res.ok) throw new Error(d.message);
             
-            // 2. Load Core Application (This was likely failing before)
-            const coreCode = await fetchCore(d.token);
-            
-            // 3. Inject and Start
             localStorage.setItem('ms_token', d.token);
-            injectCore(coreCode);
-
+            loadCore(d.token);
         } catch(e) {
-            showStatus(e.message, true);
+            toggleLoading(false); document.getElementById('status-msg').innerText = e.message;
+        }
+    }
+
+    function loadCore(token) {
+        fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => {
+            if(!res.ok) throw new Error("Auth Failed");
+            return res.text();
+        })
+        .then(code => {
+            const s = document.createElement('script'); s.textContent = code; document.body.appendChild(s);
+            gsap.to("#auth-layer", { opacity: 0, duration: 0.5, onComplete: () => document.getElementById('auth-layer').style.display='none' });
+            gsap.to("#main-ui", { opacity: 1, duration: 1 });
+            document.getElementById('main-ui').style.pointerEvents = 'all';
+            initGSAP();
+        })
+        .catch(() => {
             localStorage.removeItem('ms_token');
-        } finally {
-            toggleLoading(false);
-        }
+            resetAuthUI();
+        });
     }
 
-    async function fetchCore(token) {
-        const res = await fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if(res.status === 404) throw new Error("System Error: Core file not found in R2.");
-        if(!res.ok) throw new Error("Failed to load application.");
-        return await res.text();
-    }
-
-    function injectCore(code) {
-        const s = document.createElement('script'); 
-        s.textContent = code; 
-        document.body.appendChild(s);
-        
-        gsap.to("#auth-layer", { opacity: 0, duration: 0.5, onComplete: () => document.getElementById('auth-layer').style.display='none' });
-        gsap.to("#main-ui", { opacity: 1, duration: 1 });
-        document.getElementById('main-ui').style.pointerEvents = 'all';
-        initGSAP();
-    }
-
-    function attemptAutoLogin() {
-        const token = localStorage.getItem('ms_token');
-        if(!token) return;
-
-        toggleLoading(true);
-        document.getElementById('auth-subtitle').innerText = "Resuming session...";
-        
-        fetchCore(token)
-            .then(code => injectCore(code))
-            .catch(() => {
-                localStorage.removeItem('ms_token');
-                resetAuthUI();
-            })
-            .finally(() => toggleLoading(false));
-    }
-
-    // --- HELPERS ---
+    // Helper functions
     function toggleLoading(active) {
-        const btn = document.querySelector(document.getElementById('step-email').classList.contains('inactive') ? '#btn-verify' : '#btn-otp');
-        if(active) {
-            btn.classList.add('loading');
-            btn.disabled = true;
-        } else {
-            btn.classList.remove('loading');
-            btn.disabled = false;
-        }
+        const btn = document.querySelector(active ? '.auth-btn:not(:disabled)' : '.auth-btn.loading');
+        if(btn && active) btn.classList.add('loading');
+        if(btn && !active) btn.classList.remove('loading');
     }
-
-    function showStatus(msg, isError) {
-        const el = document.getElementById('status-msg');
-        el.innerText = msg;
-        el.classList.add('visible');
-        el.style.color = isError ? '#ff4444' : '#666';
-        if(isError && msg) {
-             gsap.fromTo(el, {x:-5}, {x:5, duration:0.05, repeat:3, yoyo:true});
-        }
-    }
-
     function slideStep(idx) {
         document.getElementById('step-slider').style.transform = `translateX(-${idx * 50}%)`;
         document.getElementById(idx===0?'step-email':'step-verify').classList.remove('inactive');
         document.getElementById(idx===1?'step-email':'step-verify').classList.add('inactive');
     }
-
-    function resetAuthUI() { 
-        slideStep(0); 
-        document.getElementById('status-msg').innerText = ''; 
-        document.getElementById('auth-subtitle').innerText = "Professional Studio Access";
-    }
-
-    window.onload = attemptAutoLogin;
+    function resetAuthUI() { slideStep(0); document.getElementById('status-msg').innerText = ''; }
+    
+    // Auto-login
+    const saved = localStorage.getItem('ms_token');
+    if(saved) loadCore(saved);
 </script>
 </body>
 </html>
