@@ -1,384 +1,116 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MetaStar Studio Pro</title>
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
     
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- GSAP Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
-    
-    <style>
-        :root {
-            --bg-canvas: #09090b; --bg-panel: #111113; --border: #27272a;
-            --text-main: #e4e4e7; --text-muted: #71717a; --accent: #dfff00;
-            --input-bg: #18181b; --sidebar-width: 320px;
-            --safe-top: env(safe-area-inset-top);
-        }
-        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
-        
-        body { 
-            margin: 0; background: var(--bg-canvas); color: var(--text-main); 
-            font-family: 'Space Grotesk', sans-serif; height: 100dvh; overflow: hidden; 
-            font-size: 13px; overscroll-behavior: none; user-select: none;
-        }
+    // CORS Setup
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*", // Or restricts to your domain: "https://metastar.vercel.app"
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
 
-        /* --- AUTH LAYER --- */
-        #auth-layer { 
-            position: fixed; inset: 0; z-index: 10000; 
-            display: flex; align-items: center; justify-content: center; 
-            background: #000; transition: opacity 0.5s ease;
-        }
-        .auth-card { 
-            background: rgba(17, 17, 19, 0.9); 
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            padding: 48px 40px; border: 1px solid rgba(255,255,255,0.08); 
-            border-radius: 24px; width: 360px; text-align: center; 
-            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
-        }
-        .auth-logo { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: #fff; }
-        .auth-desc { color: #666; font-size: 13px; margin-bottom: 32px; }
-        .auth-input { 
-            width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.05); 
-            border: 1px solid #333; color: #fff; border-radius: 12px; 
-            font-size: 15px; margin-bottom: 16px; transition: 0.2s;
-        }
-        .auth-input:focus { border-color: var(--accent); background: rgba(0,0,0,0.8); }
-        .auth-btn { 
-            width: 100%; padding: 14px; background: var(--text-main); color: #000; 
-            border: none; font-weight: 600; border-radius: 12px; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .auth-btn:active { transform: scale(0.98); }
-        
-        /* Spinner */
-        .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-left-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
-        .auth-btn.loading .spinner { display: block; } .auth-btn.loading span { display: none; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-        /* Step Slider */
-        .step-container { display: flex; width: 200%; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .step { width: 50%; padding: 4px; opacity: 1; transition: opacity 0.3s; flex-shrink: 0; }
-        .step.inactive { opacity: 0; pointer-events: none; }
-        
-        #status-msg { height: 20px; margin-top: 12px; font-size: 12px; color: #ff4444; opacity: 0; }
+    // --- 1. AUTH INITIALIZATION ---
+    if (url.pathname === "/auth/init" && request.method === "POST") {
+      try {
+        const { email } = await request.json();
+        if (!email) throw new Error("Email required");
 
-        /* --- APP UI --- */
-        #main-ui { opacity: 0; pointer-events: none; width: 100%; height: 100%; display: flex; }
-        
-        /* Sidebar */
-        #sidebar { 
-            width: var(--sidebar-width); background: var(--bg-panel); border-right: 1px solid var(--border); 
-            display: flex; flex-direction: column; z-index: 100; flex-shrink: 0;
-        }
-        .sidebar-header { 
-            padding: 18px 20px; font-weight: 700; font-size: 15px; border-bottom: 1px solid var(--border); 
-            display: flex; justify-content: space-between; align-items: center; background: var(--bg-panel); 
-        }
-        .sidebar-content { flex-grow: 1; overflow-y: auto; padding-bottom: 40px; }
-        
-        /* Viewport */
-        #viewport { flex-grow: 1; position: relative; overflow: hidden; background: var(--bg-canvas); cursor: grab; }
-        #viewport:active { cursor: grabbing; }
-        canvas { display: block; width: 100%; height: 100%; }
+        // Use Env Vars for Keys
+        const WHOP_KEY = env.WHOP_API_KEY; 
+        const RESEND_KEY = env.RESEND_API_KEY;
 
-        /* Controls */
-        .section { padding: 20px; border-bottom: 1px solid var(--border); }
-        .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
-        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-        .control-row:last-child { margin-bottom: 0; }
-        .label { font-size: 12px; color: var(--text-muted); }
-        
-        /* Custom Inputs */
-        input[type="range"] { -webkit-appearance: none; height: 4px; background: #27272a; border-radius: 2px; flex-grow: 1; margin: 0 12px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer; transition: 0.1s; }
-        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
-        
-        .val-display { background: transparent; border: 1px solid var(--border); color: var(--text-main); font-size: 11px; width: 40px; padding: 4px; text-align: center; border-radius: 4px; font-family: 'Space Grotesk', monospace; }
-        
-        /* Color & Toggles */
-        input[type="color"] { -webkit-appearance: none; border: none; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); border-radius: 50%; }
-
-        .switch { position: relative; width: 36px; height: 20px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #27272a; transition: .3s; border-radius: 20px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: #71717a; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(16px); background-color: #000; }
-
-        /* Floating UI */
-        .float-ui { position: absolute; z-index: 10; display: flex; gap: 8px; }
-        #zoom-controls { bottom: 20px; left: 20px; background: var(--bg-panel); padding: 4px; border-radius: 12px; border: 1px solid var(--border); align-items: center; }
-        #zoom-val { font-size: 12px; width: 40px; text-align: center; font-variant-numeric: tabular-nums; }
-        
-        .icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: #fff; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .icon-btn:hover { background: rgba(255,255,255,0.1); }
-
-        #export-menu { top: 20px; right: 20px; }
-        .export-dropdown { 
-            position: absolute; top: 40px; right: 0; width: 140px; 
-            background: var(--bg-panel); border: 1px solid var(--border); 
-            border-radius: 12px; padding: 6px; display: none; flex-direction: column; gap: 2px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5); transform-origin: top right;
-        }
-        .export-item { padding: 10px; text-align: left; background: none; border: none; color: #eee; font-size: 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .export-item:hover { background: #27272a; }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            #main-ui { flex-direction: column; }
-            #sidebar { 
-                position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-                background: var(--bg-panel); z-index: 200;
-                transform: translateY(calc(100vh - 60px)); /* Initial closed state */
-                border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-                border-top: 1px solid rgba(255,255,255,0.1);
-            }
-            .sidebar-header { justify-content: center; position: relative; padding: 10px; }
-            #sheet-handle { width: 40px; height: 4px; background: #3f3f46; border-radius: 2px; margin: 5px auto; }
-            #viewport { height: 100vh; width: 100vw; }
-            .credit-badge { display: none; } /* Hide on mobile for space */
-            #export-menu { top: calc(var(--safe-top) + 10px); }
-        }
-
-        .credit-badge { position: absolute; bottom: 20px; right: 20px; color: #555; font-size: 11px; text-decoration: none; opacity: 0.6; transition: 0.2s; }
-        .credit-badge:hover { opacity: 1; color: var(--accent); }
-    </style>
-</head>
-<body>
-
-<!-- AUTH UI -->
-<div id="auth-layer">
-    <div class="auth-card">
-        <div class="auth-logo">MetaStar</div>
-        <div class="auth-desc" id="auth-subtitle">Professional Studio Access</div>
-        
-        <div style="overflow: hidden;">
-            <div class="step-container" id="step-slider">
-                <!-- Step 1: Email -->
-                <div class="step" id="step-email">
-                    <input type="email" id="email-input" class="auth-input" placeholder="name@example.com">
-                    <button onclick="requestOtp()" id="btn-otp" class="auth-btn">
-                        <span>Send Access Code</span>
-                        <div class="spinner"></div>
-                    </button>
-                </div>
-                <!-- Step 2: Code -->
-                <div class="step inactive" id="step-verify">
-                    <input type="text" id="code-input" class="auth-input" placeholder="123 456" maxlength="6" style="text-align:center; letter-spacing:4px; font-weight:700;">
-                    <button onclick="verifyOtp()" id="btn-verify" class="auth-btn">
-                        <span>Verify & Launch</span>
-                        <div class="spinner"></div>
-                    </button>
-                    <div style="margin-top:15px; font-size:12px; text-decoration:underline; cursor:pointer; color:#666;" onclick="resetAuthUI()">Change Email</div>
-                </div>
-            </div>
-        </div>
-        <div id="status-msg"></div>
-    </div>
-</div>
-
-<!-- MAIN UI -->
-<div id="main-ui">
-    <!-- Tools & Canvas -->
-    <div id="viewport">
-        <canvas id="canvas"></canvas>
-        
-        <!-- Zoom Controls -->
-        <div class="float-ui" id="zoom-controls">
-            <button class="icon-btn" onclick="zoomOut()"><i data-lucide="minus" width="14"></i></button>
-            <div id="zoom-val">100%</div>
-            <button class="icon-btn" onclick="zoomIn()"><i data-lucide="plus" width="14"></i></button>
-        </div>
-
-        <!-- Export Menu -->
-        <div class="float-ui" id="export-menu">
-            <button class="icon-btn" style="background:var(--bg-panel); border:1px solid var(--border)" onclick="toggleExport()">
-                <i data-lucide="download" width="16"></i>
-            </button>
-            <div class="export-dropdown" id="export-list">
-                <button class="export-item" onclick="exportFile('png')"><i data-lucide="image" width="14"></i> Save PNG</button>
-                <button class="export-item" onclick="exportFile('jpg')"><i data-lucide="image" width="14"></i> Save JPG</button>
-                <button class="export-item" style="color:var(--accent)" onclick="exportFile('svg')"><i data-lucide="code" width="14"></i> Export SVG</button>
-            </div>
-        </div>
-        
-        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">Made by Pvrplxd</a>
-    </div>
-
-    <!-- Controls Sidebar -->
-    <aside id="sidebar">
-        <div class="sidebar-header" id="drag-handle">
-            <div id="sheet-handle"></div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <i data-lucide="command" width="16" color="var(--accent)"></i> 
-                <span>METASTAR</span>
-            </div>
-            <button class="icon-btn" onclick="resetSettings()" title="Reset">
-                <i data-lucide="rotate-ccw" width="14"></i>
-            </button>
-        </div>
-        
-        <div class="sidebar-content">
-            <div class="section">
-                <div class="section-title"><i data-lucide="box" width="12"></i> Geometry</div>
-                <div class="control-row"><span class="label">Top</span><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t" class="val-display"></div>
-                <div class="control-row"><span class="label">Right</span><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r" class="val-display"></div>
-                <div class="control-row"><span class="label">Bottom</span><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b" class="val-display"></div>
-                <div class="control-row"><span class="label">Left</span><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l" class="val-display"></div>
-            </div>
-
-            <div class="section">
-                <div class="section-title"><i data-lucide="move-3d" width="12"></i> Transform</div>
-                <div class="control-row"><span class="label">Skew X</span><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx" class="val-display"></div>
-                <div class="control-row"><span class="label">Skew Y</span><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy" class="val-display"></div>
-                <div class="control-row"><span class="label">Scale</span><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z" class="val-display"></div>
-                <div class="control-row"><span class="label">Curve</span><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c" class="val-display"></div>
-            </div>
-
-            <div class="section">
-                <div class="section-title"><i data-lucide="palette" width="12"></i> Appearance</div>
-                <div class="control-row">
-                    <span class="label">Show Grid</span>
-                    <label class="switch"><input type="checkbox" id="checkGrid" checked><span class="slider"></span></label>
-                </div>
-                <div class="control-row">
-                    <span class="label">Show Bones</span>
-                    <label class="switch"><input type="checkbox" id="checkBones"><span class="slider"></span></label>
-                </div>
-                <div class="control-row"><span class="label">Star Color</span><input type="color" id="starCol" value="#dfff00"></div>
-                <div class="control-row"><span class="label">Background</span><input type="color" id="bgCol" value="#09090b"></div>
-            </div>
-            
-            <div style="padding:20px; text-align:center; opacity:0.5; font-size:10px;">
-                MetaStar Studio v1.2 &bull; GSAP Powered
-            </div>
-        </div>
-    </aside>
-</div>
-
-<script>
-    const WORKER_URL = "https://metastar-whop.afaqaamir01.workers.dev"; // Replace with your worker URL
-    let userEmail = "";
-
-    // --- UI LOGIC ---
-    function toggleExport() { 
-        const m = document.getElementById('export-list');
-        const isFlex = m.style.display === 'flex';
-        
-        if (isFlex) {
-            gsap.to(m, { opacity: 0, scale: 0.95, duration: 0.2, onComplete: () => m.style.display = 'none' });
-        } else {
-            m.style.display = 'flex';
-            gsap.fromTo(m, { opacity: 0, scale: 0.95 }, { opacity: 1, scale: 1, duration: 0.2, ease: "back.out(1.7)" });
-        }
-    }
-
-    function initGSAP() {
-        lucide.createIcons();
-        
-        // Mobile Bottom Sheet Logic
-        if (window.innerWidth <= 768) {
-            Draggable.create("#sidebar", {
-                type: "y",
-                bounds: { minY: 0, maxY: window.innerHeight - 60 },
-                inertia: true,
-                trigger: "#drag-handle",
-                edgeResistance: 0.8,
-                onDragEnd: function() {
-                    const y = this.y;
-                    const h = window.innerHeight;
-                    const snapPoints = [0, h * 0.45, h - 60];
-                    const closest = snapPoints.reduce((prev, curr) => Math.abs(curr - y) < Math.abs(prev - y) ? curr : prev);
-                    
-                    gsap.to(this.target, { y: closest, duration: 0.5, ease: "power3.out" });
-                }
-            });
-        }
-    }
-
-    // --- AUTH LOGIC (Simplified) ---
-    async function requestOtp() {
-        const email = document.getElementById('email-input').value;
-        if(!email) return alert("Enter email");
-        
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${WORKER_URL}/auth/init`, {
-                method: 'POST', body: JSON.stringify({ email })
-            });
-            const d = await res.json();
-            toggleLoading(false);
-            
-            if(!res.ok) throw new Error(d.message);
-            
-            userEmail = email;
-            slideStep(1);
-        } catch(e) { 
-            toggleLoading(false); document.getElementById('status-msg').innerText = e.message; 
-        }
-    }
-
-    async function verifyOtp() {
-        const code = document.getElementById('code-input').value;
-        toggleLoading(true);
-        try {
-            const res = await fetch(`${WORKER_URL}/auth/verify`, {
-                method: 'POST', body: JSON.stringify({ email: userEmail, code })
-            });
-            const d = await res.json();
-            
-            if(!res.ok) throw new Error(d.message);
-            
-            localStorage.setItem('ms_token', d.token);
-            loadCore(d.token);
-        } catch(e) {
-            toggleLoading(false); document.getElementById('status-msg').innerText = e.message;
-        }
-    }
-
-    function loadCore(token) {
-        fetch(`${WORKER_URL}/core.js`, { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(res => {
-            if(!res.ok) throw new Error("Auth Failed");
-            return res.text();
-        })
-        .then(code => {
-            const s = document.createElement('script'); s.textContent = code; document.body.appendChild(s);
-            gsap.to("#auth-layer", { opacity: 0, duration: 0.5, onComplete: () => document.getElementById('auth-layer').style.display='none' });
-            gsap.to("#main-ui", { opacity: 1, duration: 1 });
-            document.getElementById('main-ui').style.pointerEvents = 'all';
-            initGSAP();
-        })
-        .catch(() => {
-            localStorage.removeItem('ms_token');
-            resetAuthUI();
+        // Check Whop Subscription
+        const whopRes = await fetch(`https://api.whop.com/v1/memberships?email=${encodeURIComponent(email)}&company_id=${env.WHOP_COMPANY_ID}`, {
+            headers: { 'Authorization': `Bearer ${WHOP_KEY}` }
         });
+        const whopData = await whopRes.json();
+        
+        const hasAccess = whopData.data && whopData.data.some(m => 
+            ['active', 'trialing', 'completed'].includes(m.status)
+        );
+
+        // Admin Bypass (Optional: Add ADMIN_EMAIL to env)
+        if (!hasAccess && email !== env.ADMIN_EMAIL) {
+          return new Response(JSON.stringify({ 
+            message: "No active MetaStar Pro subscription found." 
+            }), { status: 403, headers: corsHeaders });
+        }
+
+        // Generate & Store Code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        await env.AUTH_DB.put(`otp:${email}`, code, { expirationTtl: 300 });
+
+        // Send Email
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "MetaStar Verification <onboarding@resend.dev>",
+            to: email,
+            subject: `Your Verification Code: ${code}`,
+            html: `
+            <div style="font-family: sans-serif; background:#09090b; color:#fff; padding:30px; border-radius:10px; text-align:center;">
+                <h2 style="margin-top:0; color:#eee;">MetaStar Pro</h2>
+                <p style="color:#aaa;">Use the code below to access your workspace:</p>
+                <div style="background:#111; display:inline-block; padding:15px 30px; border:1px solid #333; border-radius:8px; margin:20px 0;">
+                    <span style="color:#dfff00; font-size:32px; letter-spacing:8px; font-weight:bold;">${code}</span>
+                </div>
+                <p style="font-size:12px; color:#555; margin-top:20px;">If you didn't request this, ignore this email.</p>
+              </div>`
+          })
+        });
+
+        return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+
+      } catch (e) {
+        return new Response(JSON.stringify({ message: e.message || "Server Error" }), { status: 500, headers: corsHeaders });
+      }
     }
 
-    // Helper functions
-    function toggleLoading(active) {
-        const btn = document.querySelector(active ? '.auth-btn:not(:disabled)' : '.auth-btn.loading');
-        if(btn && active) btn.classList.add('loading');
-        if(btn && !active) btn.classList.remove('loading');
+    // --- 2. VERIFY CODE ---
+    if (url.pathname === "/auth/verify" && request.method === "POST") {
+      try {
+        const { email, code } = await request.json();
+        const storedCode = await env.AUTH_DB.get(`otp:${email}`);
+        
+        if (!storedCode || storedCode !== code) {
+          return new Response(JSON.stringify({ message: "Invalid code" }), { status: 403, headers: corsHeaders });
+        }
+
+        const token = crypto.randomUUID();
+        // Store session for 7 days
+        await env.AUTH_DB.put(`session:${token}`, email, { expirationTtl: 604800 });
+        await env.AUTH_DB.delete(`otp:${email}`);
+
+        return new Response(JSON.stringify({ token, success: true }), { headers: corsHeaders });
+      } catch (e) {
+        return new Response(JSON.stringify({ message: "Verification failed" }), { status: 500, headers: corsHeaders });
+      }
     }
-    function slideStep(idx) {
-        document.getElementById('step-slider').style.transform = `translateX(-${idx * 50}%)`;
-        document.getElementById(idx===0?'step-email':'step-verify').classList.remove('inactive');
-        document.getElementById(idx===1?'step-email':'step-verify').classList.add('inactive');
+
+    // --- 3. SERVE CORE.JS SECURELY ---
+if (url.pathname === "/core.js") {
+        const authHeader = request.headers.get("Authorization");
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        }
+        const token = authHeader.split(" ")[1];
+        const userEmail = await env.AUTH_DB.get(`session:${token}`);
+        if (!userEmail) return new Response("Session Expired", { status: 403, headers: corsHeaders });
+
+        const object = await env.ASSETS_BUCKET.get("core.js");
+        if (object === null) return new Response("Core file missing", { status: 404, headers: corsHeaders });
+
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set("etag", object.httpEtag);
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Cache-Control", "no-store"); 
+        return new Response(object.body, { headers });
     }
-    function resetAuthUI() { slideStep(0); document.getElementById('status-msg').innerText = ''; }
-    
-    // Auto-login
-    const saved = localStorage.getItem('ms_token');
-    if(saved) loadCore(saved);
-</script>
-</body>
-</html>
+
+    return new Response("Not Found", { status: 404, headers: corsHeaders });
+  }
+};
