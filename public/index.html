@@ -46,6 +46,23 @@
             </div>
 
             <div id="view-verify" class="auth-view hidden">
+                <div id="view-resume" class="auth-view hidden" style="text-align: center;">
+                    <div style="margin-bottom: 16px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div style="font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px;">Welcome Back</div>
+                    <div id="resume-email" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;"></div>
+                    
+                    <div style="width: 100%; height: 2px; background: #222; border-radius: 2px; overflow: hidden; position: relative;">
+                        <div id="resume-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); transition: width 1.5s ease-in-out;"></div>
+                    </div>
+                    
+                    <div style="margin-top: 12px; font-size: 10px; color: #444;">RESTORING WORKSPACE...</div>
+                </div>
+                
                 <div class="otp-instruction">Enter the 6-digit code sent to your email.</div>
                 
                 <div class="otp-group" id="otp-container">
