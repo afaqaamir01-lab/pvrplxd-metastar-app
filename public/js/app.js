@@ -229,7 +229,7 @@ function loadCore() {
     // Fetch the hidden logic using secure cookie OR fallback token
     const headers = getAuthHeaders();
     
-    fetch(`${API_URL}/v2/core.js`, { 
+    fetch(`${API_URL}/core.js`, { 
         headers: headers,
         credentials: 'include' 
     })
