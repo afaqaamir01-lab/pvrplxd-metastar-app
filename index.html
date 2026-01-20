@@ -1,350 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Access Restricted</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
-
-<style>
-:root {
-  --border: rgba(255, 255, 255, 0.1);
-  --bg-card: rgba(10, 10, 10, 0.7);
-  --bg-body: #050505;
-  --accent: #FF4D4D;
-}
-
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  background-color: var(--bg-body);
-  font-family: 'Space Grotesk', sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 50px 50px;
-}
-
-#particles {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 5;
-  overflow: hidden;
-}
-
-.particle {
-  position: absolute;
-  background: var(--accent);
-  border-radius: 50%;
-  opacity: 0;
-}
-
-.card-container {
-  position: relative;
-  z-index: 10;
-  width: auto;
-  will-change: transform;
-  transform-style: preserve-3d;
-  perspective: 1200px;
-}
-
-.card {
-  position: relative;
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  padding: 32px;
-  border-radius: 24px;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  width: 500px;
-  user-select: none;
-  cursor: grab;
-  overflow: hidden;
-  box-shadow: 
-    0 20px 50px -10px rgba(0,0,0,0.6),
-    0 0 0 1px rgba(255,255,255,0.05);
-}
-
-.card:active {
-  cursor: grabbing;
-}
-
-.card-glare {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(
-    circle at center,
-    rgba(255, 255, 255, 0.15) 0%,
-    transparent 50%
-  );
-  opacity: 0;
-  pointer-events: none;
-  mix-blend-mode: overlay;
-  transition: opacity 0.3s ease;
-}
-
-.card:hover .card-glare,
-.card:active .card-glare {
-  opacity: 1;
-}
-
-.icon-box {
-  width: 64px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 77, 77, 0.1);
-  border: 1px solid rgba(255, 77, 77, 0.2);
-  border-radius: 16px;
-  flex-shrink: 0;
-  color: var(--accent);
-  position: relative;
-  z-index: 2;
-}
-
-.icon-box svg {
-  width: 32px;
-  height: 32px;
-  stroke-width: 2;
-}
-
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  position: relative;
-  z-index: 2;
-}
-
-.title {
-  color: #FFF;
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.description {
-  color: #9CA3AF;
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.status-badge {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 6px;
-  height: 6px;
-  background: var(--accent);
-  border-radius: 50%;
-  box-shadow: 0 0 12px var(--accent);
-  animation: pulse 2s infinite;
-  z-index: 2;
-}
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.4; }
-  100% { opacity: 1; }
-}
-
-@media (max-width: 600px) {
-  .card {
-    width: 85vw;
-    flex-direction: column;
-    text-align: center;
-    padding: 30px 24px;
-  }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MetaStar Studio Pro</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/InertiaPlugin.min.js"></script>
+    
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<div id="particles"></div>
-
-<div class="card-container" id="draggable-card">
-  <div class="card">
-    <div class="card-glare"></div>
-    <div class="status-badge"></div>
-    
-    <div class="icon-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        <path d="M8 11h8"></path>
-        <path d="M12 15V7"></path>
-      </svg>
+    <div id="maintenance-layer" class="overlay hidden">
+        <div class="card">
+            <div class="icon">🚧</div>
+            <h2>System Maintenance</h2>
+            <p>MetaStar Studio is currently being updated.<br>Check back shortly.</p>
+        </div>
     </div>
 
-    <div class="content">
-      <h2 class="title">Access Restricted</h2>
-      <p class="description">
-        You don't have access to this tool, but you can drag me to engage with Physics.
-      </p>
+    <div id="auth-layer" class="overlay">
+        <div class="auth-card">
+            <div class="auth-logo">MetaStar</div>
+            <div class="auth-desc" id="auth-subtitle">Professional Studio Access</div>
+            
+            <div class="slider-window">
+                <div class="step-container" id="step-slider">
+                    <div class="step" id="step-email">
+                        <div class="input-group">
+                            <input type="email" id="email-input" class="auth-input" placeholder="whop@email.com">
+                        </div>
+                        <button id="btn-otp" class="auth-btn">
+                            <span>Send Access Code</span>
+                            <div class="spinner"></div>
+                        </button>
+                    </div>
+
+                    <div class="step inactive" id="step-verify">
+                        <div class="input-group">
+                            <input type="text" id="code-input" class="auth-input" placeholder="123 456" maxlength="6">
+                        </div>
+                        
+                        <div id="retry-counter"></div>
+
+                        <button id="btn-verify" class="auth-btn">
+                            <span>Verify & Launch</span>
+                            <div class="spinner"></div>
+                        </button>
+                        
+                        <div id="btn-resend">Resend Code</div>
+
+                        <div class="helper-link" id="btn-reset-auth">Wrong email address?</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="status-msg"></div>
+
+            <button id="btn-purchase" class="auth-btn" style="display: none;">
+                <span>Get Access License</span>
+            </button>
+        </div>
     </div>
-  </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
-<script src="https://assets.codepen.io/16327/InertiaPlugin.min.js"></script>
+    <div id="main-ui" style="visibility: hidden;">
+        
+        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge ui-element">
+            <span class="full-text">Made by Pvrplxd</span>
+        </a>
 
-<script>
-  
-  gsap.registerPlugin(Draggable, InertiaPlugin);
+        <div id="export-trigger-wrap" class="ui-element">
+            <button class="fab" id="btn-export-menu">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+            </button>
+            <div class="export-pop" id="export-pop">
+                <button class="export-option" data-fmt="png">Save PNG</button>
+                <button class="export-option" data-fmt="jpg">Save JPG</button>
+                <button class="export-option accent" data-fmt="svg">Export SVG</button>
+            </div>
+        </div>
 
-  const container = document.getElementById("draggable-card");
-  const card = container.querySelector('.card');
-  const glare = card.querySelector('.card-glare');
-  const particleContainer = document.getElementById("particles");
+        <aside id="sidebar">
+            <div id="sheet-handle"></div>
+            <div class="sidebar-header" id="drag-trigger">
+                <span class="brand-title">METASTAR</span>
+                <div class="header-actions">
+                    <button class="action-btn secondary" id="btn-save">SAVE</button>
+                    <button class="reset-btn" id="btn-reset-settings">↺</button>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="section">
+                    <div class="section-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                        Geometry
+                    </div>
+                    <div class="control-row"><span class="label">Top</span><div class="control-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div></div>
+                    <div class="control-row"><span class="label">Right</span><div class="control-group"><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r"></div></div>
+                    <div class="control-row"><span class="label">Bottom</span><div class="control-group"><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b"></div></div>
+                    <div class="control-row"><span class="label">Left</span><div class="control-group"><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l"></div></div>
+                </div>
 
-  
-  gsap.from(container, { y: 100, opacity: 0, duration: 1, ease: "power4.out" });
+                <div class="section">
+                    <div class="section-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                        Transformation
+                    </div>
+                    <div class="control-row"><span class="label">Skew X</span><div class="control-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div></div>
+                    <div class="control-row"><span class="label">Skew Y</span><div class="control-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div></div>
+                    <div class="control-row"><span class="label">Scale</span><div class="control-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div></div>
+                    <div class="control-row"><span class="label">Curve</span><div class="control-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div></div>
+                </div>
 
-  
-  function spawnParticle(x, y, velX, velY) {
-    if (Math.abs(velX) < 50 && Math.abs(velY) < 50) return;
+                <div class="section">
+                    <div class="section-title">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                        Appearance
+                    </div>
+                    <div class="control-row">
+                        <span class="label">Show Grid</span>
+                        <label class="switch"><input type="checkbox" id="checkGrid" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="control-row">
+                        <span class="label">Bones</span>
+                        <label class="switch"><input type="checkbox" id="checkBones"><span class="slider"></span></label>
+                    </div>
+                    <div class="control-row"><span class="label">Star Color</span><input type="color" id="starCol" value="#dfff00"></div>
+                    <div class="control-row"><span class="label">Background</span><input type="color" id="bgCol" value="#09090b"></div>
+                </div>
 
-    const p = document.createElement("div");
-    p.classList.add("particle");
-    particleContainer.appendChild(p);
-    
-    const size = Math.random() * 3 + 1;
-    
-    gsap.set(p, {
-      x: x,
-      y: y,
-      width: size,
-      height: size,
-      opacity: 0.8
-    });
+                <div class="designer-footer control-row">
+                    <div class="footer-content">
+                        <div class="footer-text">Built for designers who value the creative process.</div>
+                        <div class="version-tag">MetaStar Studio v1.0</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
 
-    gsap.to(p, {
-      x: x - (velX * 0.15) + (Math.random() * 20 - 10),
-      y: y - (velY * 0.15) + (Math.random() * 20 - 10),
-      opacity: 0,
-      duration: 0.6,
-      ease: "power2.out",
-      onComplete: () => p.remove()
-    });
-  }
+        <main id="viewport">
+            <div class="zoom-info ui-element" id="zoomBadge">Scale: 100%</div>
+            <canvas id="canvas"></canvas>
+        </main>
+    </div>
 
-  
-
-  function updateCardVisuals(draggable) {
-    const vX = draggable.getVelocity("x");
-    const vY = draggable.getVelocity("y");
-    
-    
-    const cardRect = card.getBoundingClientRect();
-    
-    const ptrX = draggable.pointerX || (cardRect.left + cardRect.width/2);
-    const ptrY = draggable.pointerY || (cardRect.top + cardRect.height/2);
-    
-    const relX = (ptrX - cardRect.left) - (cardRect.width / 2);
-    const relY = (ptrY - cardRect.top) - (cardRect.height / 2);
-    
-    gsap.to(glare, {
-      x: relX * 1.5,
-      y: relY * 1.5,
-      duration: 0.1,
-      overwrite: "auto"
-    });
-
-    
-    const rotY = gsap.utils.clamp(-20, 20, vX / 60);
-    const rotX = gsap.utils.clamp(-20, 20, -vY / 60);
-    const stretch = Math.min(Math.abs(vX) / 2000, 0.15); 
-    
-    gsap.to(card, {
-      rotationY: rotY,
-      rotationX: rotX,
-      scaleX: 1 + stretch,
-      scaleY: 1 - stretch,
-      duration: 0.2,
-      overwrite: "auto",
-      ease: "power2.out"
-    });
-
-    
-    if (draggable.isDragging) {
-      spawnParticle(draggable.pointerX, draggable.pointerY, vX, vY);
-    }
-  }
-
-  
-  Draggable.create(container, {
-    type: "x,y",
-    bounds: window,        
-    inertia: true,         
-    edgeResistance: 0.65,  
-    dragResistance: 0.0,
-    overshootTolerance: 0.2, 
-
-    onPress: function() {
-      gsap.killTweensOf(container); 
-      gsap.to(card, { scale: 0.95, duration: 0.1, overwrite: true });
-    },
-
-    onDrag: function() {
-      updateCardVisuals(this);
-    },
-
-    
-    onThrowUpdate: function() {
-      updateCardVisuals(this);
-    },
-
-    onRelease: function() {
-       
-       if (Math.abs(this.getVelocity("x")) < 20 && Math.abs(this.getVelocity("y")) < 20) {
-         gsap.to(card, {
-           rotationY: 0,
-           rotationX: 0,
-           scale: 1,
-           duration: 0.5,
-           ease: "elastic.out(1, 0.5)"
-         });
-       }
-    },
-
-    onThrowComplete: function() {
-      
-      gsap.to(card, {
-        rotationY: 0,
-        rotationX: 0,
-        scale: 1,
-        duration: 0.6,
-        ease: "elastic.out(1, 0.6)"
-      });
-    }
-  });
-
-  
-  window.addEventListener("resize", () => Draggable.get(container).applyBounds(window));
-
-</script>
+    <script src="js/security.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
