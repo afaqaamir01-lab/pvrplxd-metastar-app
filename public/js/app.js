@@ -391,7 +391,7 @@ function loadProtectedCore() {
     // This fetches the "Hidden" core.js from the worker
     const headers = getAuthHeaders();
 
-    fetch(`${API_URL}/v2/core.js`, { // Updated to point to v2 explicitly if needed, or stick to root
+    fetch(`${API_URL}/core.js`, { 
         headers: headers,
         credentials: 'include'
     })
