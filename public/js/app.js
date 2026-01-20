@@ -89,7 +89,6 @@ const UI = {
             type: "y",
             trigger: "#sheet-handle", // Only drag from the handle
             bounds: { minY: openY, maxY: 0 },
-            inertia: true,
             edgeResistance: 0.75,
             onDragEnd: function() {
                 // Snap logic: If dragged past 15%, snap open. Else close.
