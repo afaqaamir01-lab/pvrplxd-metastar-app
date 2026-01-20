@@ -39,6 +39,10 @@
                     <span>Get Access Code</span>
                     <div class="btn-loader"></div>
                 </button>
+
+                <button id="btn-purchase" class="text-link" style="display: none; margin-top: 15px; color: var(--accent);">
+                    No License? Get Access Here &rarr;
+                </button>
             </div>
 
             <div id="view-verify" class="auth-view hidden">
@@ -58,10 +62,12 @@
                     <div class="btn-loader"></div>
                 </button>
                 
+                <div id="retry-counter" style="font-size: 10px; color: var(--danger); margin-top: 10px; height: 12px;"></div>
+
                 <div class="auth-footer">
                     <button id="btn-resend" class="text-link">Resend Code</button>
                     <span class="divider">•</span>
-                    <button id="btn-back" class="text-link">Change Email</button>
+                    <button id="btn-reset-auth" class="text-link">Change Email</button>
                 </div>
             </div>
 
@@ -98,7 +104,7 @@
             <div class="sidebar-header">
                 <span class="brand">CONTROLS</span>
                 <div class="header-tools">
-                    <button class="icon-btn" id="btn-reset" title="Reset All">↺</button>
+                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">↺</button>
                     <button class="save-btn" id="btn-save">SAVE</button>
                 </div>
             </div>
