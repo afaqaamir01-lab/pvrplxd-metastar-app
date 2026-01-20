@@ -2,8 +2,8 @@
 :root {
     /* Colors */
     --bg-app: #050505;
-    --glass-panel: rgba(20, 20, 23, 0.75);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-panel: rgba(20, 20, 23, 0.85); /* Slightly more opaque for readability */
+    --glass-border: rgba(255, 255, 255, 0.1);
     --accent: #dfff00;
     --accent-dim: rgba(223, 255, 0, 0.15);
     --text-main: #ffffff;
@@ -111,9 +111,22 @@ body {
     cursor: pointer;
     transition: transform 0.1s;
     position: relative;
+    display: flex; justify-content: center; align-items: center;
 }
 .primary-btn:active { transform: scale(0.98); }
 .primary-btn:disabled { opacity: 0.7; cursor: wait; }
+
+/* Loader Spinner inside button */
+.btn-loader {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    position: absolute;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* OTP Inputs */
 .otp-instruction { color: #888; font-size: 13px; margin-bottom: 24px; line-height: 1.5; }
@@ -136,6 +149,7 @@ body {
 .status-toast {
     margin-top: 16px; min-height: 20px; font-size: 12px; font-weight: 500;
     opacity: 0; transition: opacity 0.3s;
+    color: var(--text-muted);
 }
 .status-toast.visible { opacity: 1; }
 .status-toast.error { color: var(--danger); }
@@ -144,7 +158,12 @@ body {
 #main-ui { position: relative; width: 100%; height: 100%; }
 
 /* Canvas Viewport */
-#viewport { width: 100%; height: 100%; background: var(--bg-app); cursor: crosshair; }
+#viewport { 
+    width: 100%; height: 100%; 
+    background: var(--bg-app); 
+    cursor: crosshair; 
+    touch-action: none; /* Prevents scrolling while dragging shapes */
+}
 canvas { display: block; width: 100%; height: 100%; }
 
 /* --- 4. FLOATING SIDEBAR (Desktop) --- */
@@ -163,7 +182,6 @@ canvas { display: block; width: 100%; height: 100%; }
     display: flex; flex-direction: column;
     z-index: 100;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    transition: transform 0.1s linear; /* Smooth drag */
 }
 
 /* Header */
@@ -195,20 +213,21 @@ canvas { display: block; width: 100%; height: 100%; }
 /* Scrollable Content */
 .sidebar-content {
     flex: 1; overflow-y: auto; padding: 20px;
-    scrollbar-width: thin; scrollbar-color: #333 transparent;
+    /* Hide Scrollbar but keep functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
-.sidebar-content::-webkit-scrollbar { width: 4px; }
-.sidebar-content::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+.sidebar-content::-webkit-scrollbar { display: none; }
 
 /* Controls */
 .control-section { margin-bottom: 32px; }
 .section-label {
     font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--accent); margin-bottom: 16px; opacity: 0.8;
+    color: var(--accent); margin-bottom: 16px; opacity: 0.9;
 }
 
 .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.control-row label { font-size: 12px; color: #aaa; font-weight: 500; min-width: 60px; }
+.control-row label { font-size: 12px; color: #ccc; font-weight: 500; min-width: 60px; }
 
 .slider-group { display: flex; align-items: center; gap: 10px; flex: 1; }
 
@@ -220,6 +239,7 @@ input[type=range] {
 input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
     background: #fff; cursor: pointer; transition: transform 0.1s;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); background: var(--accent); }
 
@@ -227,12 +247,15 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); backgroun
 input[type=number] {
     width: 44px; background: rgba(0,0,0,0.3); border: 1px solid #333;
     color: #fff; font-size: 11px; padding: 4px; border-radius: 4px; text-align: center;
+    -moz-appearance: textfield;
 }
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
 /* Color Picker */
 input[type=color] {
     -webkit-appearance: none; border: none; width: 24px; height: 24px;
     border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer;
+    box-shadow: 0 0 0 1px #333;
 }
 
 /* Toggle Switch */
@@ -252,7 +275,7 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
 /* Footer */
 .sidebar-footer {
     margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--glass-border);
-    font-size: 10px; color: #444; text-align: center;
+    font-size: 10px; color: #555; text-align: center;
 }
 
 /* --- 5. FAB & OVERLAYS --- */
@@ -268,6 +291,7 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
     position: absolute; top: 54px; right: 0; width: 160px;
     background: #111; border: 1px solid #333; border-radius: 12px;
     padding: 6px; display: none; flex-direction: column; gap: 2px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
 }
 .menu-item {
     background: transparent; border: none; color: #ddd; text-align: left;
@@ -283,33 +307,44 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
     padding: 6px 12px; border-radius: 20px; font-size: 11px;
     display: flex; gap: 8px; align-items: center; color: #ccc;
     pointer-events: none;
+    transition: left 0.1s linear;
 }
 
 .credit-badge {
     position: absolute; bottom: 20px; right: 20px;
     font-size: 10px; color: #444; text-decoration: none; font-weight: 600;
+    transition: color 0.2s;
 }
+.credit-badge:hover { color: var(--accent); }
 
 /* --- 6. MOBILE RESPONSIVENESS (The Bottom Sheet) --- */
 #sheet-handle { display: none; } /* Hidden on desktop */
 
 @media (max-width: 768px) {
-    :root { --sidebar-width: 100%; }
+    :root { --sidebar-width: 100%; --sidebar-margin: 0; }
 
     /* Transform Sidebar to Bottom Sheet */
     #sidebar {
         top: auto; left: 0; right: 0; bottom: 0;
         width: 100%;
-        height: 85vh; /* Max height when open */
+        height: 80vh; /* Controlled height */
+        max-height: 80dvh;
         border-radius: 24px 24px 0 0; /* Rounded top only */
-        border-left: none; border-right: none; border-bottom: none;
-        transform: translateY(calc(100% - 70px)); /* Peek Logic (JS will control this too) */
+        border: 1px solid var(--glass-border); border-bottom: none;
+        
+        /* Initial State: Peek Mode */
+        transform: translateY(calc(100% - 70px)); 
+        padding-bottom: env(safe-area-inset-bottom); /* iPhone X+ Safe Area */
+        transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
+    /* Active class toggled by JS/Draggable for open state */
+    #sidebar.open { transform: translateY(0); }
+
     #sheet-handle {
-        display: block; width: 40px; height: 5px;
+        display: block; width: 40px; height: 4px;
         background: #444; border-radius: 10px;
-        margin: 12px auto 4px;
+        margin: 12px auto 8px;
         cursor: grab;
     }
 
@@ -318,10 +353,10 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
     .fab-container { top: 20px; right: 20px; }
     .credit-badge { display: none; } /* Hide credit on mobile for space */
     
-    /* Make controls larger for touch */
-    input[type=range] { height: 6px; }
-    input[type=range]::-webkit-slider-thumb { width: 20px; height: 20px; }
+    /* Input sizing for touch */
+    input[type=range] { height: 12px; } /* Easier to grab */
+    input[type=range]::-webkit-slider-thumb { width: 24px; height: 24px; box-shadow: none; }
     
-    /* Remove hover effects on mobile to prevent sticky states */
+    /* Remove hover effects on mobile */
     .icon-btn:hover { background: transparent; }
 }
