@@ -1,224 +1,255 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
  * Handles Auth, Animations, and Core Injection
- * Updated: v2.1 (Fixes Paths & Auth Headers)
+ * Updated: v2.2 (Full Feature Set + Secure Hybrid Auth)
  */
 
-// CONFIGURATION
+// --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
 
-// STATE
+// --- STATE ---
 let userEmail = "";
 let resendTimer = null;
-let msToken = null; // Memory Fallback for Auth
+let msToken = null; // Hybrid Auth Token (Memory Fallback)
 
-// DOM CACHE
+// --- DOM ELEMENTS ---
 const els = {
     emailInput: document.getElementById('email-input'),
+    codeInput: document.getElementById('code-input'),
     btnOtp: document.getElementById('btn-otp'),
     btnVerify: document.getElementById('btn-verify'),
-    otpContainer: document.getElementById('otp-container'),
-    otpInputs: document.querySelectorAll('.otp-digit'),
     statusMsg: document.getElementById('status-msg'),
+    exportPop: document.getElementById('export-pop'),
+    authSubtitle: document.getElementById('auth-subtitle'),
+    
+    // UI Extras
+    btnPurchase: document.getElementById('btn-purchase'),
+    btnResend: document.getElementById('btn-resend'),
+    retryCounter: document.getElementById('retry-counter'),
+    
+    // Sidebar
     sidebar: document.getElementById('sidebar'),
-    zoomVal: document.getElementById('zoom-val')
+    zoomVal: document.getElementById('zoomBadge')
 };
 
 // --- UI & ANIMATION CONTROLLER (GSAP) ---
 const UI = {
-    // 1. Initial Entry Animation
-    init: () => {
-        gsap.set(".auth-container", { autoAlpha: 1 }); // Ensure visibility
-        gsap.from(".auth-container", {
-            y: 40, opacity: 0, duration: 1.2, ease: "power4.out", delay: 0.2
+    // 1. Intro Animation
+    intro: () => {
+        gsap.set(".auth-card", { y: 30, opacity: 0 }); 
+        gsap.to(".auth-card", { 
+            y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 
         });
     },
 
-    // 2. Switch Auth Views (Email <-> Verify)
-    switchView: (view) => {
-        const emailView = document.getElementById('view-email');
-        const verifyView = document.getElementById('view-verify');
+    // 2. Slide Logic (Email <-> Code)
+    slideAuth: (toVerify = true) => {
+        const xVal = toVerify ? "-50%" : "0%";
+        gsap.to("#step-slider", { x: xVal, duration: 0.6, ease: "expo.inOut" });
         
-        if (view === 'verify') {
-            gsap.to(emailView, { autoAlpha: 0, duration: 0.3, display: 'none' });
-            gsap.to(verifyView, { 
-                autoAlpha: 1, duration: 0.4, display: 'block', delay: 0.3,
-                onComplete: () => els.otpInputs[0].focus()
-            });
+        if (toVerify) {
+            gsap.to("#step-email", { opacity: 0, duration: 0.3 });
+            gsap.to("#step-verify", { opacity: 1, delay: 0.2, duration: 0.3, pointerEvents: "all" });
+            setTimeout(() => els.codeInput?.focus(), 400);
         } else {
-            gsap.to(verifyView, { autoAlpha: 0, duration: 0.3, display: 'none' });
-            gsap.to(emailView, { 
-                autoAlpha: 1, duration: 0.4, display: 'block', delay: 0.3,
-                onComplete: () => els.emailInput.focus()
-            });
+            gsap.to("#step-email", { opacity: 1, delay: 0.2, duration: 0.3 });
+            gsap.to("#step-verify", { opacity: 0, duration: 0.3, pointerEvents: "none" });
         }
     },
 
-    // 3. Error Feedback (Shake)
-    shake: (element) => {
-        gsap.fromTo(element, 
-            { x: -10 }, 
-            { x: 10, duration: 0.1, repeat: 3, yoyo: true, clearProps: "x" }
+    // 3. Error Shake
+    shakeError: () => {
+        gsap.fromTo(".auth-card", 
+            { x: -5 }, 
+            { x: 5, duration: 0.1, repeat: 3, yoyo: true, ease: "none", clearProps: "x" }
         );
-        // Flash red border if supported
-        if(element.style) {
-            gsap.fromTo(element, { borderColor: "#ff4444" }, { borderColor: "#333", duration: 1.5 });
-        }
     },
 
-    // 4. Unlock Application (Grand Reveal)
-    unlock: (onComplete) => {
+    // 4. Unlock Transition (The Grand Reveal)
+    unlockTransition: (onComplete) => {
         const tl = gsap.timeline({ onComplete });
         
-        // Fade out Auth
-        tl.to("#auth-layer", { opacity: 0, duration: 0.6, pointerEvents: "none" })
+        tl.to("#auth-layer", { opacity: 0, duration: 0.5, pointerEvents: "none" })
           .set("#auth-layer", { display: "none" })
-          .set("#main-ui", { visibility: "visible" });
-          
-        // Animate UI In
-        tl.from("#sidebar", { x: -320, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
-          .from(".fab-container", { scale: 0, opacity: 0, duration: 0.4, ease: "back.out(1.7)" }, "-=0.4")
-          .from(".zoom-badge", { y: -20, opacity: 0, duration: 0.4 }, "-=0.4");
+          .set("#main-ui", { visibility: "visible" })
+          .from("#sidebar", { x: -340, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
+          .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
+          .from(".ui-element", { y: 20, opacity: 0, stagger: 0.1, duration: 0.6, ease: "back.out(1.7)" }, "-=0.8")
+          .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
     },
 
-    // 5. Mobile Draggable Sidebar (Bottom Sheet)
-    initDraggable: () => {
-        if (window.innerWidth > 768) return; // Desktop uses fixed positioning
+    // 5. Toggle Purchase Button
+    togglePurchaseBtn: (show) => {
+        if (!els.btnPurchase) return;
+        if(show) {
+            els.btnPurchase.style.display = "block";
+            gsap.fromTo(els.btnPurchase, { height: 0, opacity: 0 }, { height: "auto", opacity: 1, duration: 0.4 });
+        } else {
+            els.btnPurchase.style.display = "none";
+        }
+    },
 
-        // Use visualViewport height for better accuracy on mobile browsers
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const openY = -(vh * 0.80); // 80% up
-        
-        Draggable.create(els.sidebar, {
-            type: "y",
-            trigger: "#sheet-handle", 
-            bounds: { minY: openY, maxY: 0 },
-            edgeResistance: 0.8,
-            inertia: true, // Requires InertiaPlugin, falls back gracefully if missing
-            onDrag: function() {
-                // Dim background based on drag percentage? (Optional enhancement)
-            },
-            onDragEnd: function() {
-                // Snap logic: If dragged past 15% of open height, snap open
-                const threshold = openY * 0.15;
-                const isOpening = this.y < threshold;
-                
-                if (isOpening) {
-                    gsap.to(this.target, { y: openY, duration: 0.5, ease: "power3.out" });
-                    this.target.classList.add('open');
-                } else {
-                    gsap.to(this.target, { y: 0, duration: 0.5, ease: "power3.out" });
-                    this.target.classList.remove('open');
-                }
+    // 6. Update Retry Counter
+    updateRetries: (remaining) => {
+        if (!els.retryCounter) return;
+        if(remaining === null || remaining === undefined) {
+            els.retryCounter.innerText = "";
+        } else {
+            els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
+            if(remaining < 2) {
+                gsap.fromTo(els.retryCounter, { scale: 1.1 }, { scale: 1, duration: 0.2 });
             }
+        }
+    },
+
+    // 7. Toggle Export Menu
+    toggleExport: (show) => {
+        if(!els.exportPop) return;
+        gsap.to("#export-pop", { 
+            autoAlpha: show ? 1 : 0, 
+            scale: show ? 1 : 0.9, 
+            duration: 0.2, 
+            display: show ? "flex" : "none" 
         });
     },
-    
-    // 6. Loading State Helper
-    setLoading: (btn, isLoading) => {
-        const text = btn.querySelector('span');
-        const loader = btn.querySelector('.btn-loader');
-        if (isLoading) {
-            btn.disabled = true;
-            if(text) text.style.opacity = "0";
-            if(loader) loader.style.display = "block";
-        } else {
-            btn.disabled = false;
-            if(text) text.style.opacity = "1";
-            if(loader) loader.style.display = "none";
-        }
+
+    // 8. Flash Save Success
+    flashSave: () => {
+        const btn = document.getElementById('btn-save');
+        if(!btn) return;
+        const originalText = btn.innerText;
+        btn.innerText = "SAVED!";
+        btn.style.color = "var(--accent)";
+        btn.style.borderColor = "var(--accent)";
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.style.color = "";
+            btn.style.borderColor = "";
+        }, 2000);
+    },
+
+    // 9. Mobile Drag Logic
+    initMobileDrag: () => {
+        if (window.innerWidth > 768) return;
+        const sidebar = document.getElementById('sidebar');
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const OPEN_Y = -(vh - 80); 
+
+        Draggable.create(sidebar, {
+            type: "y",
+            trigger: "#sheet-handle", // Only drag by handle
+            bounds: { minY: OPEN_Y, maxY: 0 },
+            inertia: true, // Graceful fallback if plugin missing
+            edgeResistance: 0.8,
+            onDragEnd: function() {
+                const y = this.y;
+                // Snap logic
+                gsap.to(this.target, { y: (y < OPEN_Y * 0.25) ? OPEN_Y : 0, duration: 0.5, ease: "power3.out" });
+            }
+        });
     }
 };
 
-// --- AUTHENTICATION LOGIC ---
-
-// Helper: Get Headers (Robust Auth)
+// --- HELPER: AUTH HEADERS (Hybrid Strategy) ---
 function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
-    // Always attach Bearer token if we have it, as a backup for Cookies
+    // If cookie fails, we send the token manually
     if (msToken) headers['Authorization'] = `Bearer ${msToken}`;
     return headers;
 }
 
-async function checkSession() {
+// --- APP INITIALIZATION ---
+async function initApp() {
+    UI.intro();
+
+    // 1. Health Check
     try {
-        // Send request with credentials (cookies)
+        const health = await fetch(`${API_URL}/health`); 
+        const status = await health.json();
+        if(status.maintenance) {
+            document.getElementById('maintenance-layer').classList.remove('hidden');
+            document.getElementById('auth-layer').classList.add('hidden');
+            return;
+        }
+    } catch(e) {}
+
+    // 2. Auto-Login (Check Cookie Session)
+    // We try to validate immediately. If valid, we unlock.
+    try {
         const res = await fetch(`${API_URL}/auth/validate`, {
             method: 'POST',
-            credentials: 'include',
-            headers: getAuthHeaders() // Include token if we recovered it from storage
+            credentials: 'include' // Sends cookie
         });
-        
-        // Handle non-JSON responses (like 404/500 text errors) gracefully
-        const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Server communication error");
-        }
-
         const data = await res.json();
         
         if (data.valid) {
             if (data.email) userEmail = data.email;
-            UI.unlock(() => loadCore());
-        } else {
-            console.log("Session invalid, waiting for login.");
+            unlockApp();
         }
     } catch (e) {
-        console.warn("Session check skipped:", e.message);
+        console.log("No active session.");
     }
+    
+    bindEvents();
 }
 
+// --- SECURE AUTHENTICATION ---
 async function requestOtp(isResend = false) {
     const email = els.emailInput.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        UI.shake(els.emailInput);
-        return showStatus("Invalid email address", true);
+    
+    // Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) { 
+        UI.shakeError(); 
+        return showStatus("Invalid email format", true); 
     }
     
     userEmail = email;
-    const btn = isResend ? document.getElementById('btn-resend') : els.btnOtp;
-    UI.setLoading(btn, true);
+    setLoading(isResend ? els.btnResend : els.btnOtp, true);
     showStatus("");
+    UI.togglePurchaseBtn(false);
 
     try {
+        // API Call
         const res = await fetch(`${API_URL}/auth/init`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
-        
         const data = await res.json();
 
+        // Error Handling
         if (!res.ok) {
-            // Handle Rate Limits specifically
-            if(res.status === 429) throw new Error(data.message || "Too many attempts. Wait a bit.");
-            throw new Error(data.message || "Failed to send code");
+            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") {
+                UI.togglePurchaseBtn(true);
+                throw new Error("No active subscription found.");
+            }
+            if (res.status === 429) {
+                throw new Error(data.message || "Too many attempts. Try again later.");
+            }
+            throw new Error(data.message || "Connection failed");
         }
-
+        
         // Success
-        if (!isResend) UI.switchView('verify');
+        if(!isResend) UI.slideAuth(true);
+        if(els.authSubtitle) els.authSubtitle.innerText = `Code sent to ${email}`;
         startResendTimer();
-        showStatus(`Code sent to ${email}`, false);
-
+        UI.updateRetries(null); // Clear errors
+        
     } catch (e) {
-        UI.shake(document.querySelector('.auth-container'));
         showStatus(e.message, true);
+        UI.shakeError();
     } finally {
-        UI.setLoading(btn, false);
+        setLoading(isResend ? els.btnResend : els.btnOtp, false);
     }
 }
 
 async function verifyOtp() {
-    // Collect OTP from inputs
-    let code = "";
-    els.otpInputs.forEach(input => code += input.value);
+    const code = els.codeInput.value.trim();
+    if (code.length < 6) { UI.shakeError(); return showStatus("Enter 6-digit code", true); }
 
-    if (code.length < 6) {
-        UI.shake(els.otpContainer);
-        return showStatus("Enter full 6-digit code", true);
-    }
-
-    UI.setLoading(els.btnVerify, true);
+    setLoading(els.btnVerify, true);
     showStatus("");
 
     try {
@@ -226,270 +257,218 @@ async function verifyOtp() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userEmail, code }),
-            credentials: 'include' // Important: Accepts the HttpOnly cookie
+            credentials: 'include' // Expect HttpOnly cookie
         });
-        
         const data = await res.json();
 
         if (!res.ok) {
-            if(data.attemptsRemaining !== undefined) {
-                 throw new Error(`${data.message}. attempts left: ${data.attemptsRemaining}`);
+            // Handle 3-Strike Rule
+            if (data.attemptsRemaining !== undefined) {
+                UI.updateRetries(data.attemptsRemaining);
+                if(data.attemptsRemaining === 0) {
+                    throw new Error("Account locked. Try again in 24h.");
+                }
             }
             throw new Error(data.message || "Verification failed");
         }
 
-        // Success: 
-        // 1. Browser sets Cookie automatically (Primary)
-        // 2. We capture Token as fallback (Secondary)
+        // Success - Store Token Fallback
         if (data.token) {
             msToken = data.token;
-            // Optional: Persist token to sessionStorage for refresh survival (if cookies fail)
-            try { sessionStorage.setItem('ms_backup_token', data.token); } catch(e){}
         }
 
-        UI.unlock(() => {
-            loadCore();
-            UI.initDraggable(); // Init mobile controls
-        });
+        unlockApp();
 
     } catch (e) {
-        UI.shake(els.otpContainer);
         showStatus(e.message, true);
-        // Clear inputs on error
-        els.otpInputs.forEach(i => i.value = "");
-        els.otpInputs[0].focus();
+        UI.shakeError();
+        els.codeInput.value = ""; 
     } finally {
-        UI.setLoading(els.btnVerify, false);
+        setLoading(els.btnVerify, false);
     }
 }
 
-// --- CORE ENGINE LOADER ---
-function loadCore() {
-    // Check for backup token if msToken is empty (page refresh scenario)
-    if (!msToken) {
-        try { msToken = sessionStorage.getItem('ms_backup_token'); } catch(e){}
-    }
-
-    const headers = getAuthHeaders();
+// --- TIMERS ---
+function startResendTimer() {
+    if(!els.btnResend) return;
     
-    // UPDATED PATH: fetching from root /core.js as per R2 structure
+    let timeLeft = 60;
+    els.btnResend.style.display = "none";
+    els.btnResend.innerText = `Wait ${timeLeft}s`;
+    
+    if(resendTimer) clearInterval(resendTimer);
+    
+    resendTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            clearInterval(resendTimer);
+            els.btnResend.style.display = "block"; 
+            els.btnResend.innerText = "Resend Code";
+            if(els.authSubtitle) els.authSubtitle.innerText = "Did not receive code?";
+        }
+    }, 1000);
+}
+
+// --- CORE LOADER (THE VAULT) ---
+function unlockApp() {
+    UI.unlockTransition(() => {
+        loadProtectedCore();
+        UI.initMobileDrag();
+    });
+}
+
+function loadProtectedCore() {
+    // This fetches the "Hidden" core.js from the worker
+    const headers = getAuthHeaders();
+
     fetch(`${API_URL}/core.js`, { 
         headers: headers,
-        credentials: 'include' 
+        credentials: 'include'
     })
     .then(res => {
-        if (res.status === 401 || res.status === 403) throw new Error("Unauthorized Access");
+        if (res.status === 401 || res.status === 403) throw new Error("Auth Failed");
         if (res.status === 404) throw new Error("Core Engine Not Found (404)");
-        if (!res.ok) throw new Error(`System Error (${res.status})`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
         return res.text();
     })
     .then(scriptContent => {
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
-        console.log("%c MetaStar System Secured & Loaded.", "color: #dfff00");
+        console.log("System Unlocked.");
         
-        // Attempt to load saved preferences after engine injects
-        setTimeout(loadPreferences, 500);
+        // Load preferences only after core is ready
+        setTimeout(loadUserState, 500);
     })
     .catch(e => {
-        console.error(e);
-        showStatus(`Load Error: ${e.message}`, true);
-        // Re-show auth if unauthorized
-        if(e.message.includes("Unauthorized")) {
-             // reload page to clear stale state
-             setTimeout(() => window.location.reload(), 2000);
-        }
+        console.error("Core Load Failed:", e);
+        showStatus(`System Error: ${e.message}`, true);
     });
 }
 
-// --- PREFERENCES (Cloud Save) ---
-async function savePreferences() {
+// --- CLOUD STORAGE ---
+async function saveUserState() {
     if (!window.MetaStar) return;
-    const btn = document.getElementById('btn-save');
-    const originalText = btn.innerText;
     
-    // UI Feedback
-    btn.innerText = "SAVING...";
-    btn.style.opacity = "0.7";
+    const btn = document.getElementById('btn-save');
+    const prevText = btn.innerText;
+    btn.innerText = "...";
     
     try {
-        const state = window.MetaStar.getState();
-        const headers = getAuthHeaders();
-        
-        const res = await fetch(`${API_URL}/storage/save`, {
+        const state = window.MetaStar.getState(); 
+        await fetch(`${API_URL}/storage/save`, {
             method: 'POST',
-            headers: headers,
-            body: JSON.stringify(state),
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: JSON.stringify(state)
+        });
+        UI.flashSave();
+    } catch (e) {
+        btn.innerText = "ERROR";
+        setTimeout(() => btn.innerText = prevText, 2000);
+    }
+}
+
+async function loadUserState() {
+    try {
+        const res = await fetch(`${API_URL}/storage/load`, {
+            headers: getAuthHeaders(),
             credentials: 'include'
         });
+        const data = await res.json();
         
-        if(!res.ok) throw new Error("Save failed");
+        if (data.config) {
+            const waitForCore = setInterval(() => {
+                if(window.MetaStar && window.MetaStar.importState) {
+                    window.MetaStar.importState(data.config);
+                    clearInterval(waitForCore);
+                }
+            }, 100);
+        }
+    } catch (e) {}
+}
 
-        btn.innerText = "SAVED!";
-        btn.style.backgroundColor = "#dfff00";
-        btn.style.color = "#000";
-    } catch(e) {
-        console.error(e);
-        btn.innerText = "ERROR";
-        btn.style.backgroundColor = "#ff4444";
+// --- EVENT BINDING ---
+function bindEvents() {
+    if(els.btnOtp) els.btnOtp.onclick = () => requestOtp(false);
+    if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
+    if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
+    if(els.btnPurchase) els.btnPurchase.onclick = () => window.open(PURCHASE_URL, '_blank');
+
+    const btnResetAuth = document.getElementById('btn-reset-auth');
+    if(btnResetAuth) {
+        btnResetAuth.onclick = () => {
+            UI.slideAuth(false);
+            resetAuthUI();
+        };
     }
     
-    setTimeout(() => {
-        btn.innerText = originalText;
-        btn.style.backgroundColor = "";
-        btn.style.color = "";
-        btn.style.opacity = "1";
-    }, 2000);
-}
+    if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp(false) });
+    if(els.codeInput) els.codeInput.addEventListener('keypress', (e) => { if(e.key==='Enter') verifyOtp() });
 
-async function loadPreferences() {
-    try {
-        const headers = getAuthHeaders();
-        const res = await fetch(`${API_URL}/storage/load`, { 
-            headers: headers,
-            credentials: 'include' 
+    const saveBtn = document.getElementById('btn-save');
+    if(saveBtn) saveBtn.onclick = saveUserState;
+
+    const resetSetBtn = document.getElementById('btn-reset-settings');
+    if(resetSetBtn) resetSetBtn.onclick = () => window.MetaStar?.reset();
+
+    // Export Logic
+    const exportBtn = document.getElementById('btn-export-menu');
+    let isExportOpen = false;
+    
+    if(exportBtn && els.exportPop) {
+        document.addEventListener('click', (e) => {
+            if (!exportBtn.contains(e.target) && !els.exportPop.contains(e.target) && isExportOpen) {
+                UI.toggleExport(false); isExportOpen = false;
+            }
         });
-        if(!res.ok) return; // Silent fail on new accounts
-        
-        const data = await res.json();
-        if (data.config && window.MetaStar) {
-            window.MetaStar.importState(data.config);
-            showStatus("Preferences loaded", false);
-            setTimeout(() => showStatus("", false), 2000);
-        }
-    } catch(e) {
-        console.log("No preferences found or load error.");
+
+        exportBtn.onclick = (e) => {
+            e.stopPropagation();
+            isExportOpen = !isExportOpen;
+            UI.toggleExport(isExportOpen);
+        };
+
+        els.exportPop.querySelectorAll('.export-option').forEach(btn => {
+            btn.onclick = () => {
+                if(window.MetaStar?.export) {
+                    window.MetaStar.export(btn.dataset.fmt);
+                    UI.toggleExport(false); isExportOpen = false;
+                }
+            };
+        });
     }
 }
 
-// --- UTILITIES ---
+// --- HELPERS ---
+function setLoading(btn, isLoading) {
+    if(!btn) return;
+    const spinner = btn.querySelector('.spinner');
+    if(isLoading) { 
+        btn.classList.add('loading'); 
+        btn.disabled = true; 
+        if(spinner) spinner.style.display = 'block';
+    } else { 
+        btn.classList.remove('loading'); 
+        btn.disabled = false; 
+        if(spinner) spinner.style.display = 'none';
+    }
+}
 
 function showStatus(msg, isError) {
     if(!els.statusMsg) return;
     els.statusMsg.innerText = msg;
-    els.statusMsg.className = `status-toast visible ${isError ? 'error' : ''}`;
+    els.statusMsg.classList.add('visible');
+    els.statusMsg.style.color = isError ? '#ff4444' : '#888';
 }
 
-function startResendTimer() {
-    const btn = document.getElementById('btn-resend');
-    if(!btn) return;
-    
-    let timeLeft = 60;
-    btn.disabled = true;
-    
-    if (resendTimer) clearInterval(resendTimer);
-    resendTimer = setInterval(() => {
-        timeLeft--;
-        btn.innerText = `Resend in ${timeLeft}s`;
-        if (timeLeft <= 0) {
-            clearInterval(resendTimer);
-            btn.innerText = "Resend Code";
-            btn.disabled = false;
-        }
-    }, 1000);
-}
-
-// --- INITIALIZATION & EVENTS ---
-function initApp() {
-    UI.init();
-    checkSession(); // Auto-login check
-
-    // 1. Auth Events
-    if(els.btnOtp) els.btnOtp.onclick = () => requestOtp(false);
-    if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
-    
-    // Enter Key Logic
-    if(els.emailInput) {
-        els.emailInput.addEventListener('keypress', (e) => { 
-            if(e.key === 'Enter') requestOtp(false); 
-        });
-    }
-
-    // 2. Smart OTP Inputs
-    if(els.otpInputs) {
-        els.otpInputs.forEach((input, index) => {
-            // Allow only numbers
-            input.addEventListener('input', (e) => {
-                // Remove non-numeric chars
-                e.target.value = e.target.value.replace(/[^0-9]/g, '');
-                
-                if (e.target.value.length > 1) e.target.value = e.target.value.slice(0, 1);
-                
-                // Auto-advance
-                if (e.target.value.length === 1 && index < 5) {
-                    els.otpInputs[index + 1].focus();
-                }
-            });
-            
-            // Backspace navigation
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                    els.otpInputs[index - 1].focus();
-                }
-                if (e.key === 'Enter' && index === 5) verifyOtp();
-            });
-            
-            // Paste support
-            input.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
-                if (!paste) return;
-                
-                const digits = paste.split('').slice(0, 6);
-                digits.forEach((d, i) => {
-                    if (els.otpInputs[i]) els.otpInputs[i].value = d;
-                });
-                
-                // Focus last filled or next empty
-                const nextFocus = Math.min(digits.length, 5);
-                els.otpInputs[nextFocus].focus();
-                
-                if (digits.length === 6) verifyOtp();
-            });
-        });
-    }
-
-    // 3. Navigation
-    const btnBack = document.getElementById('btn-back');
-    const btnResend = document.getElementById('btn-resend');
-    if(btnBack) btnBack.onclick = () => UI.switchView('email');
-    if(btnResend) btnResend.onclick = () => requestOtp(true);
-
-    // 4. App Toolbar Events
-    const btnSave = document.getElementById('btn-save');
-    const btnReset = document.getElementById('btn-reset');
-    if(btnSave) btnSave.onclick = savePreferences;
-    if(btnReset) btnReset.onclick = () => window.MetaStar?.reset();
-    
-    // Export Menu Toggle
-    const exportBtn = document.getElementById('btn-export-trigger');
-    const exportMenu = document.getElementById('export-menu');
-    let menuOpen = false;
-
-    if(exportBtn && exportMenu) {
-        exportBtn.onclick = (e) => {
-            e.stopPropagation();
-            menuOpen = !menuOpen;
-            exportMenu.style.display = menuOpen ? 'flex' : 'none';
-        };
-
-        document.addEventListener('click', (e) => {
-            if(menuOpen && !exportMenu.contains(e.target)) {
-                menuOpen = false;
-                exportMenu.style.display = 'none';
-            }
-        });
-
-        // Handle Export Clicks
-        document.querySelectorAll('.menu-item').forEach(btn => {
-            btn.onclick = () => {
-                window.MetaStar?.export(btn.dataset.fmt);
-                menuOpen = false;
-                exportMenu.style.display = 'none';
-            };
-        });
-    }
+function resetAuthUI() {
+    if(els.authSubtitle) els.authSubtitle.innerText = "Professional Studio Access";
+    if(els.statusMsg) els.statusMsg.classList.remove('visible');
+    UI.togglePurchaseBtn(false);
+    UI.updateRetries(null);
+    if(els.btnResend) els.btnResend.style.display = "none";
+    if(els.codeInput) els.codeInput.value = "";
 }
 
 // Start
