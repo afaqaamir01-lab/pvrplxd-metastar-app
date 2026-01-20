@@ -1,10 +1,10 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
  * Handles Auth, Animations, and Core Injection
+ * Updated: v2.1 (Fixes Paths & Auth Headers)
  */
 
 // CONFIGURATION
-// Replace with your actual Worker URL if different
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
 
 // STATE
@@ -28,6 +28,7 @@ const els = {
 const UI = {
     // 1. Initial Entry Animation
     init: () => {
+        gsap.set(".auth-container", { autoAlpha: 1 }); // Ensure visibility
         gsap.from(".auth-container", {
             y: 40, opacity: 0, duration: 1.2, ease: "power4.out", delay: 0.2
         });
@@ -59,8 +60,10 @@ const UI = {
             { x: -10 }, 
             { x: 10, duration: 0.1, repeat: 3, yoyo: true, clearProps: "x" }
         );
-        // Flash red border
-        gsap.fromTo(element, { borderColor: "#ff4444" }, { borderColor: "#333", duration: 1.5 });
+        // Flash red border if supported
+        if(element.style) {
+            gsap.fromTo(element, { borderColor: "#ff4444" }, { borderColor: "#333", duration: 1.5 });
+        }
     },
 
     // 4. Unlock Application (Grand Reveal)
@@ -82,20 +85,31 @@ const UI = {
     initDraggable: () => {
         if (window.innerWidth > 768) return; // Desktop uses fixed positioning
 
-        const vh = window.innerHeight;
-        // Calculate drag bounds (mostly negative Y values to slide UP)
-        const openY = -(vh * 0.85); // 85% up
+        // Use visualViewport height for better accuracy on mobile browsers
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const openY = -(vh * 0.80); // 80% up
         
         Draggable.create(els.sidebar, {
             type: "y",
-            trigger: "#sheet-handle", // Only drag from the handle
+            trigger: "#sheet-handle", 
             bounds: { minY: openY, maxY: 0 },
-            edgeResistance: 0.75,
+            edgeResistance: 0.8,
+            inertia: true, // Requires InertiaPlugin, falls back gracefully if missing
+            onDrag: function() {
+                // Dim background based on drag percentage? (Optional enhancement)
+            },
             onDragEnd: function() {
-                // Snap logic: If dragged past 15%, snap open. Else close.
+                // Snap logic: If dragged past 15% of open height, snap open
                 const threshold = openY * 0.15;
-                const targetY = (this.y < threshold) ? openY : 0;
-                gsap.to(this.target, { y: targetY, duration: 0.5, ease: "power3.out" });
+                const isOpening = this.y < threshold;
+                
+                if (isOpening) {
+                    gsap.to(this.target, { y: openY, duration: 0.5, ease: "power3.out" });
+                    this.target.classList.add('open');
+                } else {
+                    gsap.to(this.target, { y: 0, duration: 0.5, ease: "power3.out" });
+                    this.target.classList.remove('open');
+                }
             }
         });
     },
@@ -106,11 +120,11 @@ const UI = {
         const loader = btn.querySelector('.btn-loader');
         if (isLoading) {
             btn.disabled = true;
-            text.style.opacity = "0";
+            if(text) text.style.opacity = "0";
             if(loader) loader.style.display = "block";
         } else {
             btn.disabled = false;
-            text.style.opacity = "1";
+            if(text) text.style.opacity = "1";
             if(loader) loader.style.display = "none";
         }
     }
@@ -118,10 +132,10 @@ const UI = {
 
 // --- AUTHENTICATION LOGIC ---
 
-// Helper: Get Headers (Cookie Fallback)
+// Helper: Get Headers (Robust Auth)
 function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
-    // If we have a memory token (cookie failed), send it manually
+    // Always attach Bearer token if we have it, as a backup for Cookies
     if (msToken) headers['Authorization'] = `Bearer ${msToken}`;
     return headers;
 }
@@ -131,16 +145,26 @@ async function checkSession() {
         // Send request with credentials (cookies)
         const res = await fetch(`${API_URL}/auth/validate`, {
             method: 'POST',
-            credentials: 'include' 
+            credentials: 'include',
+            headers: getAuthHeaders() // Include token if we recovered it from storage
         });
+        
+        // Handle non-JSON responses (like 404/500 text errors) gracefully
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Server communication error");
+        }
+
         const data = await res.json();
         
         if (data.valid) {
-            UI.unlock(() => loadCore());
             if (data.email) userEmail = data.email;
+            UI.unlock(() => loadCore());
+        } else {
+            console.log("Session invalid, waiting for login.");
         }
     } catch (e) {
-        console.log("Session check failed, please login.");
+        console.warn("Session check skipped:", e.message);
     }
 }
 
@@ -162,9 +186,14 @@ async function requestOtp(isResend = false) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
+        
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.message || "Failed to send code");
+        if (!res.ok) {
+            // Handle Rate Limits specifically
+            if(res.status === 429) throw new Error(data.message || "Too many attempts. Wait a bit.");
+            throw new Error(data.message || "Failed to send code");
+        }
 
         // Success
         if (!isResend) UI.switchView('verify');
@@ -199,14 +228,24 @@ async function verifyOtp() {
             body: JSON.stringify({ email: userEmail, code }),
             credentials: 'include' // Important: Accepts the HttpOnly cookie
         });
+        
         const data = await res.json();
 
-        if (!res.ok) throw new Error(data.message || "Verification failed");
+        if (!res.ok) {
+            if(data.attemptsRemaining !== undefined) {
+                 throw new Error(`${data.message}. attempts left: ${data.attemptsRemaining}`);
+            }
+            throw new Error(data.message || "Verification failed");
+        }
 
         // Success: 
         // 1. Browser sets Cookie automatically (Primary)
         // 2. We capture Token as fallback (Secondary)
-        if (data.token) msToken = data.token;
+        if (data.token) {
+            msToken = data.token;
+            // Optional: Persist token to sessionStorage for refresh survival (if cookies fail)
+            try { sessionStorage.setItem('ms_backup_token', data.token); } catch(e){}
+        }
 
         UI.unlock(() => {
             loadCore();
@@ -226,29 +265,41 @@ async function verifyOtp() {
 
 // --- CORE ENGINE LOADER ---
 function loadCore() {
-    // Fetch the hidden logic using secure cookie OR fallback token
+    // Check for backup token if msToken is empty (page refresh scenario)
+    if (!msToken) {
+        try { msToken = sessionStorage.getItem('ms_backup_token'); } catch(e){}
+    }
+
     const headers = getAuthHeaders();
     
+    // UPDATED PATH: fetching from root /core.js as per R2 structure
     fetch(`${API_URL}/core.js`, { 
         headers: headers,
         credentials: 'include' 
     })
     .then(res => {
-        if (!res.ok) throw new Error("Access Denied");
+        if (res.status === 401 || res.status === 403) throw new Error("Unauthorized Access");
+        if (res.status === 404) throw new Error("Core Engine Not Found (404)");
+        if (!res.ok) throw new Error(`System Error (${res.status})`);
         return res.text();
     })
     .then(scriptContent => {
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
-        console.log("System Secured & Loaded.");
+        console.log("%c MetaStar System Secured & Loaded.", "color: #dfff00");
         
-        // Attempt to load saved preferences
+        // Attempt to load saved preferences after engine injects
         setTimeout(loadPreferences, 500);
     })
     .catch(e => {
         console.error(e);
-        showStatus("Security Error: Refresh page.", true);
+        showStatus(`Load Error: ${e.message}`, true);
+        // Re-show auth if unauthorized
+        if(e.message.includes("Unauthorized")) {
+             // reload page to clear stale state
+             setTimeout(() => window.location.reload(), 2000);
+        }
     });
 }
 
@@ -257,26 +308,38 @@ async function savePreferences() {
     if (!window.MetaStar) return;
     const btn = document.getElementById('btn-save');
     const originalText = btn.innerText;
+    
+    // UI Feedback
     btn.innerText = "SAVING...";
+    btn.style.opacity = "0.7";
     
     try {
         const state = window.MetaStar.getState();
         const headers = getAuthHeaders();
         
-        await fetch(`${API_URL}/storage/save`, {
+        const res = await fetch(`${API_URL}/storage/save`, {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(state),
             credentials: 'include'
         });
+        
+        if(!res.ok) throw new Error("Save failed");
+
         btn.innerText = "SAVED!";
-        btn.style.background = "#dfff00";
+        btn.style.backgroundColor = "#dfff00";
+        btn.style.color = "#000";
     } catch(e) {
+        console.error(e);
         btn.innerText = "ERROR";
+        btn.style.backgroundColor = "#ff4444";
     }
+    
     setTimeout(() => {
         btn.innerText = originalText;
-        btn.style.background = "";
+        btn.style.backgroundColor = "";
+        btn.style.color = "";
+        btn.style.opacity = "1";
     }, 2000);
 }
 
@@ -287,22 +350,31 @@ async function loadPreferences() {
             headers: headers,
             credentials: 'include' 
         });
+        if(!res.ok) return; // Silent fail on new accounts
+        
         const data = await res.json();
         if (data.config && window.MetaStar) {
             window.MetaStar.importState(data.config);
+            showStatus("Preferences loaded", false);
+            setTimeout(() => showStatus("", false), 2000);
         }
-    } catch(e) {}
+    } catch(e) {
+        console.log("No preferences found or load error.");
+    }
 }
 
 // --- UTILITIES ---
 
 function showStatus(msg, isError) {
+    if(!els.statusMsg) return;
     els.statusMsg.innerText = msg;
     els.statusMsg.className = `status-toast visible ${isError ? 'error' : ''}`;
 }
 
 function startResendTimer() {
     const btn = document.getElementById('btn-resend');
+    if(!btn) return;
+    
     let timeLeft = 60;
     btn.disabled = true;
     
@@ -321,66 +393,103 @@ function startResendTimer() {
 // --- INITIALIZATION & EVENTS ---
 function initApp() {
     UI.init();
-    checkSession();
+    checkSession(); // Auto-login check
 
     // 1. Auth Events
-    els.btnOtp.onclick = () => requestOtp(false);
-    els.btnVerify.onclick = verifyOtp;
+    if(els.btnOtp) els.btnOtp.onclick = () => requestOtp(false);
+    if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
     
     // Enter Key Logic
-    els.emailInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') requestOtp(false); });
+    if(els.emailInput) {
+        els.emailInput.addEventListener('keypress', (e) => { 
+            if(e.key === 'Enter') requestOtp(false); 
+        });
+    }
 
     // 2. Smart OTP Inputs
-    els.otpInputs.forEach((input, index) => {
-        // Allow only numbers
-        input.addEventListener('input', (e) => {
-            if (e.target.value.length > 1) e.target.value = e.target.value.slice(0, 1); // Clamp length
-            if (e.target.value.length === 1 && index < 5) els.otpInputs[index + 1].focus();
+    if(els.otpInputs) {
+        els.otpInputs.forEach((input, index) => {
+            // Allow only numbers
+            input.addEventListener('input', (e) => {
+                // Remove non-numeric chars
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                
+                if (e.target.value.length > 1) e.target.value = e.target.value.slice(0, 1);
+                
+                // Auto-advance
+                if (e.target.value.length === 1 && index < 5) {
+                    els.otpInputs[index + 1].focus();
+                }
+            });
+            
+            // Backspace navigation
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    els.otpInputs[index - 1].focus();
+                }
+                if (e.key === 'Enter' && index === 5) verifyOtp();
+            });
+            
+            // Paste support
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+                if (!paste) return;
+                
+                const digits = paste.split('').slice(0, 6);
+                digits.forEach((d, i) => {
+                    if (els.otpInputs[i]) els.otpInputs[i].value = d;
+                });
+                
+                // Focus last filled or next empty
+                const nextFocus = Math.min(digits.length, 5);
+                els.otpInputs[nextFocus].focus();
+                
+                if (digits.length === 6) verifyOtp();
+            });
         });
-        
-        // Backspace navigation
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                els.otpInputs[index - 1].focus();
-            }
-            if (e.key === 'Enter' && index === 5) verifyOtp();
-        });
-    });
+    }
 
     // 3. Navigation
-    document.getElementById('btn-back').onclick = () => UI.switchView('email');
-    document.getElementById('btn-resend').onclick = () => requestOtp(true);
+    const btnBack = document.getElementById('btn-back');
+    const btnResend = document.getElementById('btn-resend');
+    if(btnBack) btnBack.onclick = () => UI.switchView('email');
+    if(btnResend) btnResend.onclick = () => requestOtp(true);
 
     // 4. App Toolbar Events
-    document.getElementById('btn-save').onclick = savePreferences;
-    document.getElementById('btn-reset').onclick = () => window.MetaStar?.reset();
+    const btnSave = document.getElementById('btn-save');
+    const btnReset = document.getElementById('btn-reset');
+    if(btnSave) btnSave.onclick = savePreferences;
+    if(btnReset) btnReset.onclick = () => window.MetaStar?.reset();
     
     // Export Menu Toggle
     const exportBtn = document.getElementById('btn-export-trigger');
     const exportMenu = document.getElementById('export-menu');
     let menuOpen = false;
 
-    exportBtn.onclick = (e) => {
-        e.stopPropagation();
-        menuOpen = !menuOpen;
-        exportMenu.style.display = menuOpen ? 'flex' : 'none';
-    };
-
-    document.addEventListener('click', (e) => {
-        if(menuOpen && !exportMenu.contains(e.target)) {
-            menuOpen = false;
-            exportMenu.style.display = 'none';
-        }
-    });
-
-    // Handle Export Clicks
-    document.querySelectorAll('.menu-item').forEach(btn => {
-        btn.onclick = () => {
-            window.MetaStar?.export(btn.dataset.fmt);
-            menuOpen = false;
-            exportMenu.style.display = 'none';
+    if(exportBtn && exportMenu) {
+        exportBtn.onclick = (e) => {
+            e.stopPropagation();
+            menuOpen = !menuOpen;
+            exportMenu.style.display = menuOpen ? 'flex' : 'none';
         };
-    });
+
+        document.addEventListener('click', (e) => {
+            if(menuOpen && !exportMenu.contains(e.target)) {
+                menuOpen = false;
+                exportMenu.style.display = 'none';
+            }
+        });
+
+        // Handle Export Clicks
+        document.querySelectorAll('.menu-item').forEach(btn => {
+            btn.onclick = () => {
+                window.MetaStar?.export(btn.dataset.fmt);
+                menuOpen = false;
+                exportMenu.style.display = 'none';
+            };
+        });
+    }
 }
 
 // Start
