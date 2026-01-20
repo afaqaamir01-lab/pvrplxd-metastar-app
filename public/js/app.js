@@ -1,7 +1,7 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
  * Handles Auth, Animations, and Core Injection
- * Updated: v2.2 (Full Feature Set + Secure Hybrid Auth)
+ * Updated: v2.3 (Fixed OTP Collection & Input Logic)
  */
 
 // --- CONFIGURATION ---
@@ -16,7 +16,8 @@ let msToken = null; // Hybrid Auth Token (Memory Fallback)
 // --- DOM ELEMENTS ---
 const els = {
     emailInput: document.getElementById('email-input'),
-    codeInput: document.getElementById('code-input'),
+    // FIXED: Removed single codeInput, we now reference the container
+    otpContainer: document.getElementById('otp-container'), 
     btnOtp: document.getElementById('btn-otp'),
     btnVerify: document.getElementById('btn-verify'),
     statusMsg: document.getElementById('status-msg'),
@@ -45,22 +46,38 @@ const UI = {
 
     // 2. Slide Logic (Email <-> Code)
     slideAuth: (toVerify = true) => {
-        const xVal = toVerify ? "-50%" : "0%";
-        gsap.to("#step-slider", { x: xVal, duration: 0.6, ease: "expo.inOut" });
-        
+        // Simple visibility toggle since specific ID sliders aren't in your HTML
+        const viewEmail = document.getElementById('view-email');
+        const viewVerify = document.getElementById('view-verify');
+
         if (toVerify) {
-            gsap.to("#step-email", { opacity: 0, duration: 0.3 });
-            gsap.to("#step-verify", { opacity: 1, delay: 0.2, duration: 0.3, pointerEvents: "all" });
-            setTimeout(() => els.codeInput?.focus(), 400);
+            // Hide Email View
+            viewEmail.classList.add('hidden');
+            viewEmail.classList.remove('active');
+            
+            // Show Verify View
+            viewVerify.classList.remove('hidden');
+            viewVerify.classList.add('active');
+            
+            // Focus first OTP digit
+            setTimeout(() => {
+                const firstDigit = els.otpContainer.querySelector('.otp-digit');
+                if(firstDigit) firstDigit.focus();
+            }, 400);
         } else {
-            gsap.to("#step-email", { opacity: 1, delay: 0.2, duration: 0.3 });
-            gsap.to("#step-verify", { opacity: 0, duration: 0.3, pointerEvents: "none" });
+            // Show Email View
+            viewEmail.classList.remove('hidden');
+            viewEmail.classList.add('active');
+            
+            // Hide Verify View
+            viewVerify.classList.add('hidden');
+            viewVerify.classList.remove('active');
         }
     },
 
     // 3. Error Shake
     shakeError: () => {
-        gsap.fromTo(".auth-card", 
+        gsap.fromTo(".auth-container", 
             { x: -5 }, 
             { x: 5, duration: 0.1, repeat: 3, yoyo: true, ease: "none", clearProps: "x" }
         );
@@ -136,18 +153,21 @@ const UI = {
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const OPEN_Y = -(vh - 80); 
 
-        Draggable.create(sidebar, {
-            type: "y",
-            trigger: "#sheet-handle", // Only drag by handle
-            bounds: { minY: OPEN_Y, maxY: 0 },
-            inertia: true, // Graceful fallback if plugin missing
-            edgeResistance: 0.8,
-            onDragEnd: function() {
-                const y = this.y;
-                // Snap logic
-                gsap.to(this.target, { y: (y < OPEN_Y * 0.25) ? OPEN_Y : 0, duration: 0.5, ease: "power3.out" });
-            }
-        });
+        // Check if Draggable is loaded
+        if (typeof Draggable !== 'undefined') {
+            Draggable.create(sidebar, {
+                type: "y",
+                trigger: "#sheet-handle", // Only drag by handle
+                bounds: { minY: OPEN_Y, maxY: 0 },
+                inertia: true, 
+                edgeResistance: 0.8,
+                onDragEnd: function() {
+                    const y = this.y;
+                    // Snap logic
+                    gsap.to(this.target, { y: (y < OPEN_Y * 0.25) ? OPEN_Y : 0, duration: 0.5, ease: "power3.out" });
+                }
+            });
+        }
     }
 };
 
@@ -159,9 +179,24 @@ function getAuthHeaders() {
     return headers;
 }
 
+// --- HELPER: OTP COLLECTION ---
+function getOtpCode() {
+    const inputs = els.otpContainer.querySelectorAll('.otp-digit');
+    let code = '';
+    inputs.forEach(input => code += input.value);
+    return code;
+}
+
+function clearOtpInputs() {
+    const inputs = els.otpContainer.querySelectorAll('.otp-digit');
+    inputs.forEach(input => input.value = '');
+    inputs[0].focus();
+}
+
 // --- APP INITIALIZATION ---
 async function initApp() {
     UI.intro();
+    setupOtpInteractions(); // NEW: Bind split-input logic
 
     // 1. Health Check
     try {
@@ -175,7 +210,6 @@ async function initApp() {
     } catch(e) {}
 
     // 2. Auto-Login (Check Cookie Session)
-    // We try to validate immediately. If valid, we unlock.
     try {
         const res = await fetch(`${API_URL}/auth/validate`, {
             method: 'POST',
@@ -246,8 +280,8 @@ async function requestOtp(isResend = false) {
 }
 
 async function verifyOtp() {
-    const code = els.codeInput.value.trim();
-    if (code.length < 6) { UI.shakeError(); return showStatus("Enter 6-digit code", true); }
+    const code = getOtpCode().trim(); // UPDATED: Get code from 6 boxes
+    if (code.length < 6) { UI.shakeError(); return showStatus("Enter full 6-digit code", true); }
 
     setLoading(els.btnVerify, true);
     showStatus("");
@@ -282,10 +316,46 @@ async function verifyOtp() {
     } catch (e) {
         showStatus(e.message, true);
         UI.shakeError();
-        els.codeInput.value = ""; 
+        clearOtpInputs(); // Clear boxes on error
     } finally {
         setLoading(els.btnVerify, false);
     }
+}
+
+// --- NEW: SPLIT INPUT LOGIC ---
+function setupOtpInteractions() {
+    const inputs = els.otpContainer.querySelectorAll('.otp-digit');
+    
+    inputs.forEach((input, index) => {
+        // 1. Handle typing
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (val.length === 1 && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+        });
+
+        // 2. Handle Backspace
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+            if (e.key === 'Enter') verifyOtp();
+        });
+
+        // 3. Handle Paste
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasteData = e.clipboardData.getData('text').slice(0, 6).split('');
+            pasteData.forEach((char, i) => {
+                if (inputs[i]) inputs[i].value = char;
+            });
+            // Focus last filled
+            if (inputs[pasteData.length - 1]) inputs[pasteData.length - 1].focus();
+            // Auto submit if full
+            if (pasteData.length === 6) verifyOtp();
+        });
+    });
 }
 
 // --- TIMERS ---
@@ -321,7 +391,7 @@ function loadProtectedCore() {
     // This fetches the "Hidden" core.js from the worker
     const headers = getAuthHeaders();
 
-    fetch(`${API_URL}/core.js`, { 
+    fetch(`${API_URL}/v2/core.js`, { // Updated to point to v2 explicitly if needed, or stick to root
         headers: headers,
         credentials: 'include'
     })
@@ -404,7 +474,7 @@ function bindEvents() {
     }
     
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp(false) });
-    if(els.codeInput) els.codeInput.addEventListener('keypress', (e) => { if(e.key==='Enter') verifyOtp() });
+    // Note: OTP Enter key is now handled in setupOtpInteractions
 
     const saveBtn = document.getElementById('btn-save');
     if(saveBtn) saveBtn.onclick = saveUserState;
@@ -413,27 +483,30 @@ function bindEvents() {
     if(resetSetBtn) resetSetBtn.onclick = () => window.MetaStar?.reset();
 
     // Export Logic
-    const exportBtn = document.getElementById('btn-export-menu');
+    const exportBtn = document.getElementById('btn-export-trigger'); // Fixed ID from original HTML scan
+    const exportMenu = document.getElementById('export-menu'); // Fixed ID
     let isExportOpen = false;
     
-    if(exportBtn && els.exportPop) {
+    if(exportBtn && exportMenu) {
         document.addEventListener('click', (e) => {
-            if (!exportBtn.contains(e.target) && !els.exportPop.contains(e.target) && isExportOpen) {
-                UI.toggleExport(false); isExportOpen = false;
+            if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target) && isExportOpen) {
+                // Manually hide since UI.toggleExport uses #export-pop which isn't in your HTML
+                exportMenu.style.display = 'none'; 
+                isExportOpen = false;
             }
         });
 
         exportBtn.onclick = (e) => {
             e.stopPropagation();
             isExportOpen = !isExportOpen;
-            UI.toggleExport(isExportOpen);
+            exportMenu.style.display = isExportOpen ? 'flex' : 'none';
         };
 
-        els.exportPop.querySelectorAll('.export-option').forEach(btn => {
+        exportMenu.querySelectorAll('.menu-item').forEach(btn => {
             btn.onclick = () => {
                 if(window.MetaStar?.export) {
                     window.MetaStar.export(btn.dataset.fmt);
-                    UI.toggleExport(false); isExportOpen = false;
+                    exportMenu.style.display = 'none'; isExportOpen = false;
                 }
             };
         });
@@ -443,7 +516,7 @@ function bindEvents() {
 // --- HELPERS ---
 function setLoading(btn, isLoading) {
     if(!btn) return;
-    const spinner = btn.querySelector('.spinner');
+    const spinner = btn.querySelector('.btn-loader');
     if(isLoading) { 
         btn.classList.add('loading'); 
         btn.disabled = true; 
@@ -459,16 +532,19 @@ function showStatus(msg, isError) {
     if(!els.statusMsg) return;
     els.statusMsg.innerText = msg;
     els.statusMsg.classList.add('visible');
-    els.statusMsg.style.color = isError ? '#ff4444' : '#888';
+    els.statusMsg.classList.toggle('error', isError); // Use .error class for color
 }
 
 function resetAuthUI() {
     if(els.authSubtitle) els.authSubtitle.innerText = "Professional Studio Access";
-    if(els.statusMsg) els.statusMsg.classList.remove('visible');
+    if(els.statusMsg) {
+        els.statusMsg.classList.remove('visible');
+        els.statusMsg.classList.remove('error');
+    }
     UI.togglePurchaseBtn(false);
     UI.updateRetries(null);
     if(els.btnResend) els.btnResend.style.display = "none";
-    if(els.codeInput) els.codeInput.value = "";
+    clearOtpInputs();
 }
 
 // Start
