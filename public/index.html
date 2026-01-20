@@ -1,209 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#050505">
-    <meta name="description" content="MetaStar Studio Pro - Web-based Vector Manipulation Engine">
-    
-    <title>MetaStar Studio Pro</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js" defer></script>
-    
-    <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Access Restricted</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --border: rgba(255, 255, 255, 0.1);
+  --bg-card: rgba(10, 10, 10, 0.7);
+  --bg-body: #050505;
+  --accent: #FF4D4D;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg-body);
+  font-family: 'Space Grotesk', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+#particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  background: var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.card-container {
+  position: relative;
+  z-index: 10;
+  width: auto;
+  will-change: transform;
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+.card {
+  position: relative;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  padding: 32px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  width: 500px;
+  user-select: none;
+  cursor: grab;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 50px -10px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.05);
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card-glare {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.15) 0%,
+    transparent 50%
+  );
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover .card-glare,
+.card:active .card-glare {
+  opacity: 1;
+}
+
+.icon-box {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 77, 77, 0.1);
+  border: 1px solid rgba(255, 77, 77, 0.2);
+  border-radius: 16px;
+  flex-shrink: 0;
+  color: var(--accent);
+  position: relative;
+  z-index: 2;
+}
+
+.icon-box svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 2;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+}
+
+.title {
+  color: #FFF;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.description {
+  color: #9CA3AF;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.status-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent);
+  animation: pulse 2s infinite;
+  z-index: 2;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .card {
+    width: 85vw;
+    flex-direction: column;
+    text-align: center;
+    padding: 30px 24px;
+  }
+}
+</style>
 </head>
 <body>
 
-    <div id="auth-layer" class="overlay">
-        <div class="glass-panel auth-container">
-            
-            <div class="auth-header">
-                <div class="logo-text">METASTAR</div>
-                <p id="auth-subtitle">Professional Studio Access</p>
-            </div>
+<div id="particles"></div>
 
-            <div id="view-email" class="auth-view active">
-                <div class="input-wrapper">
-                    <input type="email" id="email-input" class="modern-input" placeholder="name@example.com" autocomplete="email" inputmode="email">
-                    <div class="input-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    </div>
-                </div>
-                
-                <button id="btn-otp" class="primary-btn">
-                    <span>Get Access Code</span>
-                    <div class="btn-loader"></div>
-                </button>
-
-                <button id="btn-purchase" class="text-link" style="display: none; margin-top: 15px; color: var(--accent);">
-                    No License? Get Access Here &rarr;
-                </button>
-            </div>
-
-            <div id="view-verify" class="auth-view hidden">
-                <div id="view-resume" class="auth-view hidden" style="text-align: center;">
-                    <div style="margin-bottom: 16px;">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                    </div>
-                    <div style="font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px;">Welcome Back</div>
-                    <div id="resume-email" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;"></div>
-                    
-                    <div style="width: 100%; height: 2px; background: #222; border-radius: 2px; overflow: hidden; position: relative;">
-                        <div id="resume-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); transition: width 1.5s ease-in-out;"></div>
-                    </div>
-                    
-                    <div style="margin-top: 12px; font-size: 10px; color: #444;">RESTORING WORKSPACE...</div>
-                </div>
-                
-                <div class="otp-instruction">Enter the 6-digit code sent to your email.</div>
-                
-                <div class="otp-group" id="otp-container">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
-                </div>
-                
-                <button id="btn-verify" class="primary-btn">
-                    <span>Unlock Engine</span>
-                    <div class="btn-loader"></div>
-                </button>
-                
-                <div id="retry-counter" style="font-size: 10px; color: var(--danger); margin-top: 10px; height: 12px;"></div>
-
-                <div class="auth-footer">
-                    <button id="btn-resend" class="text-link">Resend Code</button>
-                    <span class="divider">•</span>
-                    <button id="btn-reset-auth" class="text-link">Change Email</button>
-                </div>
-            </div>
-
-            <div id="status-msg" class="status-toast"></div>
-        </div>
+<div class="card-container" id="draggable-card">
+  <div class="card">
+    <div class="card-glare"></div>
+    <div class="status-badge"></div>
+    
+    <div class="icon-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <path d="M8 11h8"></path>
+        <path d="M12 15V7"></path>
+      </svg>
     </div>
 
-    <div id="main-ui" style="visibility: hidden;">
-        
-        <main id="viewport">
-            <canvas id="canvas"></canvas>
-            
-            <div class="zoom-badge" id="zoomBadge">
-                <span class="icon">🔍</span>
-                <span id="zoom-val">100%</span>
-            </div>
-        </main>
-
-        <div class="fab-container">
-            <button class="fab" id="btn-export-trigger" title="Export">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </button>
-            <div class="export-menu" id="export-menu">
-                <button class="menu-item" data-fmt="png">Save PNG</button>
-                <button class="menu-item" data-fmt="jpg">Save JPG</button>
-                <div class="menu-divider"></div>
-                <button class="menu-item highlight" data-fmt="svg">Export SVG</button>
-            </div>
-        </div>
-
-        <aside id="sidebar">
-            <div id="sheet-handle"></div>
-            
-            <div class="sidebar-header">
-                <span class="brand">CONTROLS</span>
-                <div class="header-tools">
-                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">↺</button>
-                    <button class="save-btn" id="btn-save">SAVE</button>
-                </div>
-            </div>
-            
-            <div class="sidebar-content">
-                <div class="control-section">
-                    <div class="section-label">Geometry</div>
-                    <div class="control-row">
-                        <label>Top</label>
-                        <div class="slider-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div>
-                    </div>
-                    <div class="control-row">
-                        <label>Right</label>
-                        <div class="slider-group"><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r"></div>
-                    </div>
-                    <div class="control-row">
-                        <label>Bottom</label>
-                        <div class="slider-group"><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b"></div>
-                    </div>
-                    <div class="control-row">
-                        <label>Left</label>
-                        <div class="slider-group"><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l"></div>
-                    </div>
-                </div>
-
-                <div class="control-section">
-                    <div class="section-label">Transform</div>
-                    <div class="control-row">
-                        <label>Skew X</label>
-                        <div class="slider-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div>
-                    </div>
-                    <div class="control-row">
-                        <label>Skew Y</label>
-                        <div class="slider-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div>
-                    </div>
-                    <div class="control-row">
-                        <label>Scale</label>
-                        <div class="slider-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div>
-                    </div>
-                    <div class="control-row">
-                        <label>Curve</label>
-                        <div class="slider-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div>
-                    </div>
-                </div>
-
-                <div class="control-section">
-                    <div class="section-label">Style</div>
-                    <div class="control-row">
-                        <label>Grid</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="checkGrid" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="control-row">
-                        <label>Bones</label>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="checkBones">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="control-row">
-                        <label>Fill</label>
-                        <input type="color" id="starCol" value="#dfff00">
-                    </div>
-                    <div class="control-row">
-                        <label>BG</label>
-                        <input type="color" id="bgCol" value="#050505">
-                    </div>
-                </div>
-                
-                <div class="sidebar-footer">
-                    MetaStar Engine v2.1
-                </div>
-            </div>
-        </aside>
-
-        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">
-            By Pvrplxd
-        </a>
+    <div class="content">
+      <h2 class="title">Access Restricted</h2>
+      <p class="description">
+        You don't have access to this tool, but you can drag me to engage with Physics.
+      </p>
     </div>
+  </div>
+</div>
 
-    <script src="js/app.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+<script src="https://assets.codepen.io/16327/InertiaPlugin.min.js"></script>
+
+<script>
+  
+  gsap.registerPlugin(Draggable, InertiaPlugin);
+
+  const container = document.getElementById("draggable-card");
+  const card = container.querySelector('.card');
+  const glare = card.querySelector('.card-glare');
+  const particleContainer = document.getElementById("particles");
+
+  
+  gsap.from(container, { y: 100, opacity: 0, duration: 1, ease: "power4.out" });
+
+  
+  function spawnParticle(x, y, velX, velY) {
+    if (Math.abs(velX) < 50 && Math.abs(velY) < 50) return;
+
+    const p = document.createElement("div");
+    p.classList.add("particle");
+    particleContainer.appendChild(p);
+    
+    const size = Math.random() * 3 + 1;
+    
+    gsap.set(p, {
+      x: x,
+      y: y,
+      width: size,
+      height: size,
+      opacity: 0.8
+    });
+
+    gsap.to(p, {
+      x: x - (velX * 0.15) + (Math.random() * 20 - 10),
+      y: y - (velY * 0.15) + (Math.random() * 20 - 10),
+      opacity: 0,
+      duration: 0.6,
+      ease: "power2.out",
+      onComplete: () => p.remove()
+    });
+  }
+
+  
+
+  function updateCardVisuals(draggable) {
+    const vX = draggable.getVelocity("x");
+    const vY = draggable.getVelocity("y");
+    
+    
+    const cardRect = card.getBoundingClientRect();
+    
+    const ptrX = draggable.pointerX || (cardRect.left + cardRect.width/2);
+    const ptrY = draggable.pointerY || (cardRect.top + cardRect.height/2);
+    
+    const relX = (ptrX - cardRect.left) - (cardRect.width / 2);
+    const relY = (ptrY - cardRect.top) - (cardRect.height / 2);
+    
+    gsap.to(glare, {
+      x: relX * 1.5,
+      y: relY * 1.5,
+      duration: 0.1,
+      overwrite: "auto"
+    });
+
+    
+    const rotY = gsap.utils.clamp(-20, 20, vX / 60);
+    const rotX = gsap.utils.clamp(-20, 20, -vY / 60);
+    const stretch = Math.min(Math.abs(vX) / 2000, 0.15); 
+    
+    gsap.to(card, {
+      rotationY: rotY,
+      rotationX: rotX,
+      scaleX: 1 + stretch,
+      scaleY: 1 - stretch,
+      duration: 0.2,
+      overwrite: "auto",
+      ease: "power2.out"
+    });
+
+    
+    if (draggable.isDragging) {
+      spawnParticle(draggable.pointerX, draggable.pointerY, vX, vY);
+    }
+  }
+
+  
+  Draggable.create(container, {
+    type: "x,y",
+    bounds: window,        
+    inertia: true,         
+    edgeResistance: 0.65,  
+    dragResistance: 0.0,
+    overshootTolerance: 0.2, 
+
+    onPress: function() {
+      gsap.killTweensOf(container); 
+      gsap.to(card, { scale: 0.95, duration: 0.1, overwrite: true });
+    },
+
+    onDrag: function() {
+      updateCardVisuals(this);
+    },
+
+    
+    onThrowUpdate: function() {
+      updateCardVisuals(this);
+    },
+
+    onRelease: function() {
+       
+       if (Math.abs(this.getVelocity("x")) < 20 && Math.abs(this.getVelocity("y")) < 20) {
+         gsap.to(card, {
+           rotationY: 0,
+           rotationX: 0,
+           scale: 1,
+           duration: 0.5,
+           ease: "elastic.out(1, 0.5)"
+         });
+       }
+    },
+
+    onThrowComplete: function() {
+      
+      gsap.to(card, {
+        rotationY: 0,
+        rotationX: 0,
+        scale: 1,
+        duration: 0.6,
+        ease: "elastic.out(1, 0.6)"
+      });
+    }
+  });
+
+  
+  window.addEventListener("resize", () => Draggable.get(container).applyBounds(window));
+
+</script>
 </body>
 </html>
