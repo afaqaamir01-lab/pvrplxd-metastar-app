@@ -1,205 +1,154 @@
-// --- CONFIGURATION ---
-// Ensure this matches your Cloudflare Worker URL
-const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
+/**
+ * METASTAR STUDIO PRO - Main Controller
+ * Handles Auth, Animations, and Core Injection
+ */
 
+// CONFIGURATION
+// Replace with your actual Worker URL if different
+const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
+
+// STATE
 let userEmail = "";
-let authToken = localStorage.getItem('ms_token');
 let resendTimer = null;
 
-// --- DOM ELEMENTS ---
+// DOM CACHE
 const els = {
     emailInput: document.getElementById('email-input'),
-    codeInput: document.getElementById('code-input'),
     btnOtp: document.getElementById('btn-otp'),
     btnVerify: document.getElementById('btn-verify'),
+    otpContainer: document.getElementById('otp-container'),
+    otpInputs: document.querySelectorAll('.otp-digit'),
     statusMsg: document.getElementById('status-msg'),
-    exportPop: document.getElementById('export-pop'),
-    authSubtitle: document.getElementById('auth-subtitle'),
-    
-    // New Security Elements
-    btnPurchase: document.getElementById('btn-purchase'),
-    btnResend: document.getElementById('btn-resend'),
-    retryCounter: document.getElementById('retry-counter')
+    sidebar: document.getElementById('sidebar'),
+    zoomVal: document.getElementById('zoom-val')
 };
 
-// --- ANIMATION CONTROLLER (GSAP) ---
+// --- UI & ANIMATION CONTROLLER (GSAP) ---
 const UI = {
-    // 1. Intro Animation
-    intro: () => {
-        gsap.to(".auth-card", { 
-            y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 
+    // 1. Initial Entry Animation
+    init: () => {
+        gsap.from(".auth-container", {
+            y: 40, opacity: 0, duration: 1.2, ease: "power4.out", delay: 0.2
         });
     },
 
-    // 2. Slide Logic (Email <-> Code)
-    slideAuth: (toVerify = true) => {
-        const xVal = toVerify ? "-50%" : "0%";
-        gsap.to("#step-slider", { x: xVal, duration: 0.6, ease: "expo.inOut" });
+    // 2. Switch Auth Views (Email <-> Verify)
+    switchView: (view) => {
+        const emailView = document.getElementById('view-email');
+        const verifyView = document.getElementById('view-verify');
         
-        if (toVerify) {
-            gsap.to("#step-email", { opacity: 0, duration: 0.3 });
-            gsap.to("#step-verify", { opacity: 1, delay: 0.2, duration: 0.3, pointerEvents: "all" });
+        if (view === 'verify') {
+            gsap.to(emailView, { autoAlpha: 0, duration: 0.3, display: 'none' });
+            gsap.to(verifyView, { 
+                autoAlpha: 1, duration: 0.4, display: 'block', delay: 0.3,
+                onComplete: () => els.otpInputs[0].focus()
+            });
         } else {
-            gsap.to("#step-email", { opacity: 1, delay: 0.2, duration: 0.3 });
-            gsap.to("#step-verify", { opacity: 0, duration: 0.3, pointerEvents: "none" });
+            gsap.to(verifyView, { autoAlpha: 0, duration: 0.3, display: 'none' });
+            gsap.to(emailView, { 
+                autoAlpha: 1, duration: 0.4, display: 'block', delay: 0.3,
+                onComplete: () => els.emailInput.focus()
+            });
         }
     },
 
-    // 3. Error Shake
-    shakeError: () => {
-        gsap.fromTo(".auth-card", 
-            { x: -5 }, 
-            { x: 5, duration: 0.1, repeat: 3, yoyo: true, ease: "none", clearProps: "x" }
+    // 3. Error Feedback (Shake)
+    shake: (element) => {
+        gsap.fromTo(element, 
+            { x: -10 }, 
+            { x: 10, duration: 0.1, repeat: 3, yoyo: true, clearProps: "x" }
         );
+        // Flash red border
+        gsap.fromTo(element, { borderColor: "#ff4444" }, { borderColor: "#333", duration: 1.5 });
     },
 
-    // 4. Unlock Transition (The Grand Reveal)
-    unlockTransition: (onComplete) => {
+    // 4. Unlock Application (Grand Reveal)
+    unlock: (onComplete) => {
         const tl = gsap.timeline({ onComplete });
         
-        tl.to("#auth-layer", { opacity: 0, duration: 0.5, pointerEvents: "none" })
+        // Fade out Auth
+        tl.to("#auth-layer", { opacity: 0, duration: 0.6, pointerEvents: "none" })
           .set("#auth-layer", { display: "none" })
-          .set("#main-ui", { visibility: "visible" })
-          .from("#sidebar", { x: -340, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
-          .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
-          .from(".ui-element", { y: 20, opacity: 0, stagger: 0.1, duration: 0.6, ease: "back.out(1.7)" }, "-=0.8")
-          .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
+          .set("#main-ui", { visibility: "visible" });
+          
+        // Animate UI In
+        tl.from("#sidebar", { x: -320, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
+          .from(".fab-container", { scale: 0, opacity: 0, duration: 0.4, ease: "back.out(1.7)" }, "-=0.4")
+          .from(".zoom-badge", { y: -20, opacity: 0, duration: 0.4 }, "-=0.4");
     },
 
-    // 5. Toggle Purchase Button
-    togglePurchaseBtn: (show) => {
-        if (!els.btnPurchase) return;
-        if(show) {
-            els.btnPurchase.style.display = "block";
-            gsap.fromTo(els.btnPurchase, { height: 0, opacity: 0 }, { height: "auto", opacity: 1, duration: 0.4 });
-        } else {
-            els.btnPurchase.style.display = "none";
-        }
-    },
+    // 5. Mobile Draggable Sidebar (Bottom Sheet)
+    initDraggable: () => {
+        if (window.innerWidth > 768) return; // Desktop uses fixed positioning
 
-    // 6. Update Retry Counter
-    updateRetries: (remaining) => {
-        if (!els.retryCounter) return;
-        if(remaining === null || remaining === undefined) {
-            els.retryCounter.innerText = "";
-        } else {
-            els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
-            // Flash red if low
-            if(remaining < 2) {
-                gsap.fromTo(els.retryCounter, { scale: 1.1 }, { scale: 1, duration: 0.2 });
-            }
-        }
-    },
-
-    // 7. Toggle Export Menu
-    toggleExport: (show) => {
-        gsap.to("#export-pop", { 
-            autoAlpha: show ? 1 : 0, 
-            scale: show ? 1 : 0.9, 
-            duration: 0.2, 
-            display: show ? "flex" : "none" 
-        });
-    },
-
-    // 8. Flash Save Success
-    flashSave: () => {
-        const btn = document.getElementById('btn-save');
-        const originalText = btn.innerText;
-        btn.innerText = "SAVED!";
-        btn.style.color = "var(--accent)";
-        btn.style.borderColor = "var(--accent)";
-        setTimeout(() => {
-            btn.innerText = originalText;
-            btn.style.color = "";
-            btn.style.borderColor = "";
-        }, 2000);
-    },
-
-    // 9. Mobile Drag Logic
-    initMobileDrag: () => {
-        if (window.innerWidth > 768) return;
-        const sidebar = document.getElementById('sidebar');
         const vh = window.innerHeight;
-        const OPEN_Y = -(vh - 80); 
-
-        Draggable.create(sidebar, {
+        // Calculate drag bounds (mostly negative Y values to slide UP)
+        const openY = -(vh * 0.85); // 85% up
+        
+        Draggable.create(els.sidebar, {
             type: "y",
-            bounds: { minY: OPEN_Y, maxY: 0 },
+            trigger: "#sheet-handle", // Only drag from the handle
+            bounds: { minY: openY, maxY: 0 },
             inertia: true,
-            edgeResistance: 0.8,
+            edgeResistance: 0.75,
             onDragEnd: function() {
-                const y = this.y;
-                // Snap logic
-                gsap.to(this.target, { y: (y < OPEN_Y * 0.25) ? OPEN_Y : 0, duration: 0.5, ease: "power3.out" });
+                // Snap logic: If dragged past 15%, snap open. Else close.
+                const threshold = openY * 0.15;
+                const targetY = (this.y < threshold) ? openY : 0;
+                gsap.to(this.target, { y: targetY, duration: 0.5, ease: "power3.out" });
             }
         });
+    },
+    
+    // 6. Loading State Helper
+    setLoading: (btn, isLoading) => {
+        const text = btn.querySelector('span');
+        const loader = btn.querySelector('.btn-loader');
+        if (isLoading) {
+            btn.disabled = true;
+            text.style.opacity = "0";
+            if(loader) loader.style.display = "block";
+        } else {
+            btn.disabled = false;
+            text.style.opacity = "1";
+            if(loader) loader.style.display = "none";
+        }
     }
 };
 
-// --- APP INITIALIZATION ---
-async function initApp() {
-    gsap.set(".auth-card", { y: 30, opacity: 0 }); 
-    UI.intro();
+// --- AUTHENTICATION LOGIC ---
 
-    // 1. Health Check
+async function checkSession() {
     try {
-        const health = await fetch(`${API_URL}/health`); 
-        const status = await health.json();
-        if(status.maintenance) {
-            document.getElementById('maintenance-layer').classList.remove('hidden');
-            document.getElementById('auth-layer').classList.add('hidden');
-            return;
+        // Send request with credentials (cookies)
+        const res = await fetch(`${API_URL}/auth/validate`, {
+            method: 'POST',
+            credentials: 'include' 
+        });
+        const data = await res.json();
+        
+        if (data.valid) {
+            UI.unlock(() => loadCore());
+            if (data.email) userEmail = data.email;
         }
-    } catch(e) {}
-
-    // 2. Auto-Login (Validate Session)
-    if (authToken) {
-        setLoading(els.btnOtp, true);
-        els.authSubtitle.innerText = "Verifying session...";
-        try {
-            const res = await fetch(`${API_URL}/auth/validate`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            const data = await res.json();
-            
-            if (data.valid) {
-                unlockApp();
-                loadUserState(); 
-            } else {
-                throw new Error("Expired");
-            }
-        } catch (e) {
-            localStorage.removeItem('ms_token');
-            authToken = null;
-            resetAuthUI();
-            showStatus("Session expired. Please sign in.", true);
-        }
-        setLoading(els.btnOtp, false);
+    } catch (e) {
+        console.log("Session check failed, please login.");
     }
-    
-    bindEvents();
 }
 
-// --- SECURE AUTHENTICATION ---
 async function requestOtp(isResend = false) {
     const email = els.emailInput.value.trim();
-    
-    // Validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { 
-        UI.shakeError(); 
-        return showStatus("Invalid email format", true); 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        UI.shake(els.emailInput);
+        return showStatus("Invalid email address", true);
     }
     
     userEmail = email;
-    setLoading(isResend ? els.btnResend : els.btnOtp, true);
+    const btn = isResend ? document.getElementById('btn-resend') : els.btnOtp;
+    UI.setLoading(btn, true);
     showStatus("");
-    UI.togglePurchaseBtn(false);
 
     try {
-        // API Call
         const res = await fetch(`${API_URL}/auth/init`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -207,235 +156,209 @@ async function requestOtp(isResend = false) {
         });
         const data = await res.json();
 
-        // Error Handling
-        if (!res.ok) {
-            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") {
-                UI.togglePurchaseBtn(true);
-                throw new Error("No active subscription found.");
-            }
-            if (res.status === 429) {
-                throw new Error(data.message || "Too many attempts. Try again later.");
-            }
-            throw new Error(data.message || "Connection failed");
-        }
-        
+        if (!res.ok) throw new Error(data.message || "Failed to send code");
+
         // Success
-        if(!isResend) UI.slideAuth(true);
-        els.authSubtitle.innerText = `Code sent to ${email}`;
+        if (!isResend) UI.switchView('verify');
         startResendTimer();
-        UI.updateRetries(null); // Clear errors
-        
-        setTimeout(() => els.codeInput.focus(), 600);
+        showStatus(`Code sent to ${email}`, false);
 
     } catch (e) {
+        UI.shake(document.querySelector('.auth-container'));
         showStatus(e.message, true);
-        UI.shakeError();
     } finally {
-        setLoading(isResend ? els.btnResend : els.btnOtp, false);
+        UI.setLoading(btn, false);
     }
 }
 
 async function verifyOtp() {
-    const code = els.codeInput.value.trim();
-    if (code.length < 6) { UI.shakeError(); return showStatus("Enter 6-digit code", true); }
+    // Collect OTP from inputs
+    let code = "";
+    els.otpInputs.forEach(input => code += input.value);
 
-    setLoading(els.btnVerify, true);
+    if (code.length < 6) {
+        UI.shake(els.otpContainer);
+        return showStatus("Enter full 6-digit code", true);
+    }
+
+    UI.setLoading(els.btnVerify, true);
     showStatus("");
 
     try {
         const res = await fetch(`${API_URL}/auth/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail, code })
+            body: JSON.stringify({ email: userEmail, code }),
+            credentials: 'include' // Important: Accepts the HttpOnly cookie
         });
         const data = await res.json();
 
-        if (!res.ok) {
-            // Handle 3-Strike Rule
-            if (data.attemptsRemaining !== undefined) {
-                UI.updateRetries(data.attemptsRemaining);
-                if(data.attemptsRemaining === 0) {
-                    throw new Error("Account locked. Try again in 24h.");
-                }
-            }
-            throw new Error(data.message || "Verification failed");
-        }
+        if (!res.ok) throw new Error(data.message || "Verification failed");
 
-        // Success
-        authToken = data.token;
-        localStorage.setItem('ms_token', authToken);
-        unlockApp();
-        loadUserState(); 
+        // Success: Cookie is set by browser automatically
+        UI.unlock(() => {
+            loadCore();
+            UI.initDraggable(); // Init mobile controls
+        });
 
     } catch (e) {
+        UI.shake(els.otpContainer);
         showStatus(e.message, true);
-        UI.shakeError();
-        els.codeInput.value = ""; 
+        // Clear inputs on error
+        els.otpInputs.forEach(i => i.value = "");
+        els.otpInputs[0].focus();
     } finally {
-        setLoading(els.btnVerify, false);
+        UI.setLoading(els.btnVerify, false);
     }
 }
 
-// --- TIMERS ---
+// --- CORE ENGINE LOADER ---
+function loadCore() {
+    // Fetch the hidden logic using the secure cookie
+    fetch(`${API_URL}/v2/core.js`, { credentials: 'include' })
+        .then(res => {
+            if (!res.ok) throw new Error("Access Denied");
+            return res.text();
+        })
+        .then(scriptContent => {
+            const script = document.createElement('script');
+            script.textContent = scriptContent;
+            document.body.appendChild(script);
+            console.log("System Secured & Loaded.");
+            
+            // Attempt to load saved preferences
+            setTimeout(loadPreferences, 500);
+        })
+        .catch(e => {
+            console.error(e);
+            showStatus("Security Error: Refresh page.", true);
+        });
+}
+
+// --- PREFERENCES (Cloud Save) ---
+async function savePreferences() {
+    if (!window.MetaStar) return;
+    const btn = document.getElementById('btn-save');
+    const originalText = btn.innerText;
+    btn.innerText = "SAVING...";
+    
+    try {
+        const state = window.MetaStar.getState();
+        await fetch(`${API_URL}/storage/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(state),
+            credentials: 'include'
+        });
+        btn.innerText = "SAVED!";
+        btn.style.background = "#dfff00";
+    } catch(e) {
+        btn.innerText = "ERROR";
+    }
+    setTimeout(() => {
+        btn.innerText = originalText;
+        btn.style.background = "";
+    }, 2000);
+}
+
+async function loadPreferences() {
+    try {
+        const res = await fetch(`${API_URL}/storage/load`, { credentials: 'include' });
+        const data = await res.json();
+        if (data.config && window.MetaStar) {
+            window.MetaStar.importState(data.config);
+        }
+    } catch(e) {}
+}
+
+// --- UTILITIES ---
+
+function showStatus(msg, isError) {
+    els.statusMsg.innerText = msg;
+    els.statusMsg.className = `status-toast visible ${isError ? 'error' : ''}`;
+}
+
 function startResendTimer() {
-    if(!els.btnResend) return;
-    
+    const btn = document.getElementById('btn-resend');
     let timeLeft = 60;
-    els.btnResend.style.display = "none";
-    els.btnResend.innerText = `Wait ${timeLeft}s`;
+    btn.disabled = true;
     
-    if(resendTimer) clearInterval(resendTimer);
-    
+    if (resendTimer) clearInterval(resendTimer);
     resendTimer = setInterval(() => {
         timeLeft--;
+        btn.innerText = `Resend in ${timeLeft}s`;
         if (timeLeft <= 0) {
             clearInterval(resendTimer);
-            els.btnResend.style.display = "block"; 
-            els.btnResend.innerText = "Resend Code";
-            els.authSubtitle.innerText = "Did not receive code?";
+            btn.innerText = "Resend Code";
+            btn.disabled = false;
         }
     }, 1000);
 }
 
-// --- CORE LOADER (THE VAULT) ---
-function unlockApp() {
-    UI.unlockTransition(() => {
-        loadProtectedCore();
-        UI.initMobileDrag();
-    });
-}
+// --- INITIALIZATION & EVENTS ---
+function initApp() {
+    UI.init();
+    checkSession();
 
-function loadProtectedCore() {
-    // This fetches the "Hidden" core.js from the worker
-    fetch(`${API_URL}/core.js`, { 
-        headers: { 'Authorization': `Bearer ${authToken}` } 
-    })
-    .then(res => {
-        if(!res.ok) throw new Error("Auth Failed");
-        return res.text();
-    })
-    .then(scriptContent => {
-        const script = document.createElement('script');
-        script.textContent = scriptContent;
-        document.body.appendChild(script);
-        console.log("System Unlocked.");
-    })
-    .catch(e => {
-        console.error("Core Load Failed:", e);
-        showStatus("Security Error: Reload page.", true);
-    });
-}
-
-// --- CLOUD STORAGE ---
-async function saveUserState() {
-    if (!window.MetaStar || !authToken) return;
-    
-    const btn = document.getElementById('btn-save');
-    const prevText = btn.innerText;
-    btn.innerText = "...";
-    
-    try {
-        const state = window.MetaStar.getState(); 
-        await fetch(`${API_URL}/storage/save`, {
-            method: 'POST',
-            headers: { 
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(state)
-        });
-        UI.flashSave();
-    } catch (e) {
-        btn.innerText = "ERROR";
-        setTimeout(() => btn.innerText = prevText, 2000);
-    }
-}
-
-async function loadUserState() {
-    try {
-        const res = await fetch(`${API_URL}/storage/load`, {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        const data = await res.json();
-        
-        if (data.config) {
-            const waitForCore = setInterval(() => {
-                if(window.MetaStar && window.MetaStar.importState) {
-                    window.MetaStar.importState(data.config);
-                    clearInterval(waitForCore);
-                }
-            }, 100);
-        }
-    } catch (e) {}
-}
-
-// --- EVENT BINDING ---
-function bindEvents() {
+    // 1. Auth Events
     els.btnOtp.onclick = () => requestOtp(false);
     els.btnVerify.onclick = verifyOtp;
-    if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
-    if(els.btnPurchase) els.btnPurchase.onclick = () => window.open(PURCHASE_URL, '_blank');
-
-    document.getElementById('btn-reset-auth').onclick = () => {
-        UI.slideAuth(false);
-        resetAuthUI();
-    };
     
-    els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp(false) });
-    els.codeInput.addEventListener('keypress', (e) => { if(e.key==='Enter') verifyOtp() });
+    // Enter Key Logic
+    els.emailInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') requestOtp(false); });
 
-    const saveBtn = document.getElementById('btn-save');
-    if(saveBtn) saveBtn.onclick = saveUserState;
-
-    document.getElementById('btn-reset-settings').onclick = () => window.MetaStar?.reset();
-
-    // Export Logic
-    const exportBtn = document.getElementById('btn-export-menu');
-    let isExportOpen = false;
-    
-    document.addEventListener('click', (e) => {
-        if (!exportBtn.contains(e.target) && !els.exportPop.contains(e.target) && isExportOpen) {
-            UI.toggleExport(false); isExportOpen = false;
-        }
+    // 2. Smart OTP Inputs
+    els.otpInputs.forEach((input, index) => {
+        // Allow only numbers
+        input.addEventListener('input', (e) => {
+            if (e.target.value.length > 1) e.target.value = e.target.value.slice(0, 1); // Clamp length
+            if (e.target.value.length === 1 && index < 5) els.otpInputs[index + 1].focus();
+        });
+        
+        // Backspace navigation
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                els.otpInputs[index - 1].focus();
+            }
+            if (e.key === 'Enter' && index === 5) verifyOtp();
+        });
     });
+
+    // 3. Navigation
+    document.getElementById('btn-back').onclick = () => UI.switchView('email');
+    document.getElementById('btn-resend').onclick = () => requestOtp(true);
+
+    // 4. App Toolbar Events
+    document.getElementById('btn-save').onclick = savePreferences;
+    document.getElementById('btn-reset').onclick = () => window.MetaStar?.reset();
+    
+    // Export Menu Toggle
+    const exportBtn = document.getElementById('btn-export-trigger');
+    const exportMenu = document.getElementById('export-menu');
+    let menuOpen = false;
 
     exportBtn.onclick = (e) => {
         e.stopPropagation();
-        isExportOpen = !isExportOpen;
-        UI.toggleExport(isExportOpen);
+        menuOpen = !menuOpen;
+        exportMenu.style.display = menuOpen ? 'flex' : 'none';
     };
 
-    els.exportPop.querySelectorAll('.export-option').forEach(btn => {
+    document.addEventListener('click', (e) => {
+        if(menuOpen && !exportMenu.contains(e.target)) {
+            menuOpen = false;
+            exportMenu.style.display = 'none';
+        }
+    });
+
+    // Handle Export Clicks
+    document.querySelectorAll('.menu-item').forEach(btn => {
         btn.onclick = () => {
-            if(window.MetaStar?.export) {
-                window.MetaStar.export(btn.dataset.fmt);
-                UI.toggleExport(false); isExportOpen = false;
-            }
+            window.MetaStar?.export(btn.dataset.fmt);
+            menuOpen = false;
+            exportMenu.style.display = 'none';
         };
     });
 }
 
-// --- HELPERS ---
-function setLoading(btn, isLoading) {
-    if(!btn) return;
-    if(isLoading) { btn.classList.add('loading'); btn.disabled = true; }
-    else { btn.classList.remove('loading'); btn.disabled = false; }
-}
-
-function showStatus(msg, isError) {
-    els.statusMsg.innerText = msg;
-    els.statusMsg.classList.add('visible');
-    els.statusMsg.style.color = isError ? '#ff4444' : '#888';
-}
-
-function resetAuthUI() {
-    document.getElementById('auth-subtitle').innerText = "Professional Studio Access";
-    els.statusMsg.classList.remove('visible');
-    UI.togglePurchaseBtn(false);
-    UI.updateRetries(null);
-    if(els.btnResend) els.btnResend.style.display = "none";
-    els.codeInput.value = "";
-}
-
 // Start
-initApp();
+document.addEventListener('DOMContentLoaded', initApp);
