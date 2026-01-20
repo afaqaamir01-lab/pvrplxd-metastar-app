@@ -10,6 +10,7 @@ const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
 // STATE
 let userEmail = "";
 let resendTimer = null;
+let msToken = null; // Memory Fallback for Auth
 
 // DOM CACHE
 const els = {
@@ -117,6 +118,14 @@ const UI = {
 
 // --- AUTHENTICATION LOGIC ---
 
+// Helper: Get Headers (Cookie Fallback)
+function getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    // If we have a memory token (cookie failed), send it manually
+    if (msToken) headers['Authorization'] = `Bearer ${msToken}`;
+    return headers;
+}
+
 async function checkSession() {
     try {
         // Send request with credentials (cookies)
@@ -194,7 +203,11 @@ async function verifyOtp() {
 
         if (!res.ok) throw new Error(data.message || "Verification failed");
 
-        // Success: Cookie is set by browser automatically
+        // Success: 
+        // 1. Browser sets Cookie automatically (Primary)
+        // 2. We capture Token as fallback (Secondary)
+        if (data.token) msToken = data.token;
+
         UI.unlock(() => {
             loadCore();
             UI.initDraggable(); // Init mobile controls
@@ -213,25 +226,30 @@ async function verifyOtp() {
 
 // --- CORE ENGINE LOADER ---
 function loadCore() {
-    // Fetch the hidden logic using the secure cookie
-    fetch(`${API_URL}/v2/core.js`, { credentials: 'include' })
-        .then(res => {
-            if (!res.ok) throw new Error("Access Denied");
-            return res.text();
-        })
-        .then(scriptContent => {
-            const script = document.createElement('script');
-            script.textContent = scriptContent;
-            document.body.appendChild(script);
-            console.log("System Secured & Loaded.");
-            
-            // Attempt to load saved preferences
-            setTimeout(loadPreferences, 500);
-        })
-        .catch(e => {
-            console.error(e);
-            showStatus("Security Error: Refresh page.", true);
-        });
+    // Fetch the hidden logic using secure cookie OR fallback token
+    const headers = getAuthHeaders();
+    
+    fetch(`${API_URL}/v2/core.js`, { 
+        headers: headers,
+        credentials: 'include' 
+    })
+    .then(res => {
+        if (!res.ok) throw new Error("Access Denied");
+        return res.text();
+    })
+    .then(scriptContent => {
+        const script = document.createElement('script');
+        script.textContent = scriptContent;
+        document.body.appendChild(script);
+        console.log("System Secured & Loaded.");
+        
+        // Attempt to load saved preferences
+        setTimeout(loadPreferences, 500);
+    })
+    .catch(e => {
+        console.error(e);
+        showStatus("Security Error: Refresh page.", true);
+    });
 }
 
 // --- PREFERENCES (Cloud Save) ---
@@ -243,9 +261,11 @@ async function savePreferences() {
     
     try {
         const state = window.MetaStar.getState();
+        const headers = getAuthHeaders();
+        
         await fetch(`${API_URL}/storage/save`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(state),
             credentials: 'include'
         });
@@ -262,7 +282,11 @@ async function savePreferences() {
 
 async function loadPreferences() {
     try {
-        const res = await fetch(`${API_URL}/storage/load`, { credentials: 'include' });
+        const headers = getAuthHeaders();
+        const res = await fetch(`${API_URL}/storage/load`, { 
+            headers: headers,
+            credentials: 'include' 
+        });
         const data = await res.json();
         if (data.config && window.MetaStar) {
             window.MetaStar.importState(data.config);
