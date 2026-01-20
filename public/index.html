@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <title>MetaStar Studio Pro</title>
     
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/InertiaPlugin.min.js"></script>
@@ -14,141 +18,168 @@
 </head>
 <body>
 
-    <div id="maintenance-layer" class="overlay hidden">
-        <div class="card">
-            <div class="icon">🚧</div>
-            <h2>System Maintenance</h2>
-            <p>MetaStar Studio is currently being updated.<br>Check back shortly.</p>
-        </div>
-    </div>
-
     <div id="auth-layer" class="overlay">
-        <div class="auth-card">
-            <div class="auth-logo">MetaStar</div>
-            <div class="auth-desc" id="auth-subtitle">Professional Studio Access</div>
+        <div class="glass-panel auth-container">
             
-            <div class="slider-window">
-                <div class="step-container" id="step-slider">
-                    <div class="step" id="step-email">
-                        <div class="input-group">
-                            <input type="email" id="email-input" class="auth-input" placeholder="whop@email.com">
-                        </div>
-                        <button id="btn-otp" class="auth-btn">
-                            <span>Send Access Code</span>
-                            <div class="spinner"></div>
-                        </button>
+            <div class="auth-header">
+                <div class="logo-text">METASTAR</div>
+                <p id="auth-subtitle">Professional Studio Access</p>
+            </div>
+
+            <div id="view-email" class="auth-view active">
+                <div class="input-wrapper">
+                    <input type="email" id="email-input" class="modern-input" placeholder="name@example.com" autocomplete="email" inputmode="email">
+                    <div class="input-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                     </div>
+                </div>
+                
+                <button id="btn-otp" class="primary-btn">
+                    <span>Get Access Code</span>
+                    <div class="btn-loader"></div>
+                </button>
+            </div>
 
-                    <div class="step inactive" id="step-verify">
-                        <div class="input-group">
-                            <input type="text" id="code-input" class="auth-input" placeholder="123 456" maxlength="6">
-                        </div>
-                        
-                        <div id="retry-counter"></div>
-
-                        <button id="btn-verify" class="auth-btn">
-                            <span>Verify & Launch</span>
-                            <div class="spinner"></div>
-                        </button>
-                        
-                        <div id="btn-resend">Resend Code</div>
-
-                        <div class="helper-link" id="btn-reset-auth">Wrong email address?</div>
-                    </div>
+            <div id="view-verify" class="auth-view hidden">
+                <div class="otp-instruction">Enter the 6-digit code sent to your email.</div>
+                
+                <div class="otp-group" id="otp-container">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                </div>
+                
+                <button id="btn-verify" class="primary-btn">
+                    <span>Unlock Engine</span>
+                    <div class="btn-loader"></div>
+                </button>
+                
+                <div class="auth-footer">
+                    <button id="btn-resend" class="text-link">Resend Code</button>
+                    <span class="divider">•</span>
+                    <button id="btn-back" class="text-link">Change Email</button>
                 </div>
             </div>
 
-            <div id="status-msg"></div>
-
-            <button id="btn-purchase" class="auth-btn" style="display: none;">
-                <span>Get Access License</span>
-            </button>
+            <div id="status-msg" class="status-toast"></div>
         </div>
     </div>
 
     <div id="main-ui" style="visibility: hidden;">
         
-        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge ui-element">
-            <span class="full-text">Made by Pvrplxd</span>
-        </a>
+        <main id="viewport">
+            <canvas id="canvas"></canvas>
+            
+            <div class="zoom-badge" id="zoomBadge">
+                <span class="icon">🔍</span>
+                <span id="zoom-val">100%</span>
+            </div>
+        </main>
 
-        <div id="export-trigger-wrap" class="ui-element">
-            <button class="fab" id="btn-export-menu">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+        <div class="fab-container">
+            <button class="fab" id="btn-export-trigger">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </button>
-            <div class="export-pop" id="export-pop">
-                <button class="export-option" data-fmt="png">Save PNG</button>
-                <button class="export-option" data-fmt="jpg">Save JPG</button>
-                <button class="export-option accent" data-fmt="svg">Export SVG</button>
+            <div class="export-menu" id="export-menu">
+                <button class="menu-item" data-fmt="png">Save PNG</button>
+                <button class="menu-item" data-fmt="jpg">Save JPG</button>
+                <div class="menu-divider"></div>
+                <button class="menu-item highlight" data-fmt="svg">Export SVG</button>
             </div>
         </div>
 
         <aside id="sidebar">
             <div id="sheet-handle"></div>
-            <div class="sidebar-header" id="drag-trigger">
-                <span class="brand-title">METASTAR</span>
-                <div class="header-actions">
-                    <button class="action-btn secondary" id="btn-save">SAVE</button>
-                    <button class="reset-btn" id="btn-reset-settings">↺</button>
+            
+            <div class="sidebar-header">
+                <span class="brand">CONTROLS</span>
+                <div class="header-tools">
+                    <button class="icon-btn" id="btn-reset" title="Reset All">↺</button>
+                    <button class="save-btn" id="btn-save">SAVE</button>
                 </div>
             </div>
             
             <div class="sidebar-content">
-                <div class="section">
-                    <div class="section-title">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
-                        Geometry
-                    </div>
-                    <div class="control-row"><span class="label">Top</span><div class="control-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div></div>
-                    <div class="control-row"><span class="label">Right</span><div class="control-group"><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r"></div></div>
-                    <div class="control-row"><span class="label">Bottom</span><div class="control-group"><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b"></div></div>
-                    <div class="control-row"><span class="label">Left</span><div class="control-group"><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l"></div></div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                        Transformation
-                    </div>
-                    <div class="control-row"><span class="label">Skew X</span><div class="control-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div></div>
-                    <div class="control-row"><span class="label">Skew Y</span><div class="control-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div></div>
-                    <div class="control-row"><span class="label">Scale</span><div class="control-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div></div>
-                    <div class="control-row"><span class="label">Curve</span><div class="control-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div></div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-                        Appearance
+                <div class="control-section">
+                    <div class="section-label">Geometry</div>
+                    <div class="control-row">
+                        <label>Top</label>
+                        <div class="slider-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div>
                     </div>
                     <div class="control-row">
-                        <span class="label">Show Grid</span>
-                        <label class="switch"><input type="checkbox" id="checkGrid" checked><span class="slider"></span></label>
+                        <label>Right</label>
+                        <div class="slider-group"><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r"></div>
                     </div>
                     <div class="control-row">
-                        <span class="label">Bones</span>
-                        <label class="switch"><input type="checkbox" id="checkBones"><span class="slider"></span></label>
+                        <label>Bottom</label>
+                        <div class="slider-group"><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b"></div>
                     </div>
-                    <div class="control-row"><span class="label">Star Color</span><input type="color" id="starCol" value="#dfff00"></div>
-                    <div class="control-row"><span class="label">Background</span><input type="color" id="bgCol" value="#09090b"></div>
+                    <div class="control-row">
+                        <label>Left</label>
+                        <div class="slider-group"><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l"></div>
+                    </div>
                 </div>
 
-                <div class="designer-footer control-row">
-                    <div class="footer-content">
-                        <div class="footer-text">Built for designers who value the creative process.</div>
-                        <div class="version-tag">MetaStar Studio v1.0</div>
+                <div class="control-section">
+                    <div class="section-label">Transform</div>
+                    <div class="control-row">
+                        <label>Skew X</label>
+                        <div class="slider-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div>
                     </div>
+                    <div class="control-row">
+                        <label>Skew Y</label>
+                        <div class="slider-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Scale</label>
+                        <div class="slider-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Curve</label>
+                        <div class="slider-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-label">Style</div>
+                    <div class="control-row">
+                        <label>Grid</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="checkGrid" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="control-row">
+                        <label>Bones</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="checkBones">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="control-row">
+                        <label>Fill</label>
+                        <input type="color" id="starCol" value="#dfff00">
+                    </div>
+                    <div class="control-row">
+                        <label>Background</label>
+                        <input type="color" id="bgCol" value="#050505">
+                    </div>
+                </div>
+                
+                <div class="sidebar-footer">
+                    MetaStar Engine v2.0
                 </div>
             </div>
         </aside>
 
-        <main id="viewport">
-            <div class="zoom-info ui-element" id="zoomBadge">Scale: 100%</div>
-            <canvas id="canvas"></canvas>
-        </main>
+        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">
+            By Pvrplxd
+        </a>
     </div>
 
-    <script src="js/security.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
