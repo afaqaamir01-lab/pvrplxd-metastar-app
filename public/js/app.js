@@ -168,6 +168,30 @@ const UI = {
                 }
             });
         }
+    },
+
+    // 10. Show Resume State
+    showResume: (email) => {
+        // Hide others
+        document.getElementById('view-email').classList.add('hidden');
+        document.getElementById('view-email').classList.remove('active');
+        document.getElementById('view-verify').classList.add('hidden');
+        
+        // Show Resume
+        const viewResume = document.getElementById('view-resume');
+        const emailEl = document.getElementById('resume-email');
+        const bar = document.getElementById('resume-bar');
+        
+        if(viewResume && emailEl && bar) {
+            viewResume.classList.remove('hidden');
+            viewResume.classList.add('active');
+            emailEl.innerText = email;
+            
+            // Animate Bar
+            requestAnimationFrame(() => {
+                bar.style.width = "100%";
+            });
+        }
     }
 };
 
@@ -195,34 +219,46 @@ function clearOtpInputs() {
 
 // --- APP INITIALIZATION ---
 async function initApp() {
+    // 1. Start Intro Animation (Loads the container)
     UI.intro();
-    setupOtpInteractions(); // NEW: Bind split-input logic
+    setupOtpInteractions();
 
-    // 1. Health Check
+    // 2. Health Check (Optional but good)
     try {
         const health = await fetch(`${API_URL}/health`); 
         const status = await health.json();
         if(status.maintenance) {
-            document.getElementById('maintenance-layer').classList.remove('hidden');
-            document.getElementById('auth-layer').classList.add('hidden');
+            // Logic for maintenance...
             return;
         }
     } catch(e) {}
 
-    // 2. Auto-Login (Check Cookie Session)
+    // 3. Auto-Login (Check Session)
     try {
         const res = await fetch(`${API_URL}/auth/validate`, {
             method: 'POST',
-            credentials: 'include' // Sends cookie
+            credentials: 'include' 
         });
         const data = await res.json();
         
         if (data.valid) {
-            if (data.email) userEmail = data.email;
-            unlockApp();
+            // SESSION FOUND! 
+            userEmail = data.email || "User";
+            
+            // A. Show the new Resume Card
+            UI.showResume(userEmail);
+            
+            // B. Wait for animation (1.5s), then Unlock
+            setTimeout(() => {
+                unlockApp();
+            }, 1500); 
+            
+        } else {
+            // No session, stay on Email Input (Default)
+            console.log("No active session.");
         }
     } catch (e) {
-        console.log("No active session.");
+        console.log("Network error checking session.");
     }
     
     bindEvents();
