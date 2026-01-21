@@ -79,22 +79,16 @@ canvas { display: block; width: 100%; height: 100%; }
 /* --- 4. FLOATING SIDEBAR --- */
 #sidebar {
     position: absolute; 
-    /* Desktop: Optical Vertical Center (45% from top) */
     top: 45%; 
     left: var(--sidebar-margin); 
     width: var(--sidebar-width);
-    
-    /* Center transform + Hug logic + Hardware Accel */
     transform: translateY(-50%) translateZ(0);
-    
     height: auto; 
     max-height: 85vh;
-    
     background: var(--glass-panel);
     backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--glass-border); 
     border-radius: 20px;
-    
     display: flex; flex-direction: column; 
     z-index: 100;
     box-shadow: 0 10px 40px rgba(0,0,0,0.5);
@@ -102,7 +96,7 @@ canvas { display: block; width: 100%; height: 100%; }
 
 .sidebar-header {
     padding: 18px 20px; 
-    border-bottom: 1px solid var(--glass-border);
+    /* Divider removed here, we'll use a full-width one if needed, or rely on content spacing */
     display: flex; justify-content: space-between; align-items: center; 
     flex-shrink: 0;
 }
@@ -123,7 +117,13 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 .sidebar-content::-webkit-scrollbar { display: none; }
 
-.sidebar-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 16px 0; width: 100%; }
+/* FIX: Full Width Dividers */
+.sidebar-divider { 
+    height: 1px; 
+    background: rgba(255,255,255,0.06); 
+    width: calc(100% + 40px); /* Fill width + cancel padding */
+    margin: 16px -20px; /* Negative margin pulls it to the edge */
+}
 
 .section-label {
     font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
@@ -154,29 +154,57 @@ input[type=number] {
 }
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
+/* FIX: Color Picker Artifacts */
 input[type=color] {
-    -webkit-appearance: none; border: none; width: 24px; height: 24px;
-    border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; box-shadow: 0 0 0 1px #333;
+    -webkit-appearance: none; appearance: none;
+    border: none; width: 24px; height: 24px;
+    border-radius: 50%; overflow: hidden; padding: 0; 
+    cursor: pointer; box-shadow: 0 0 0 1px #333;
+    background: none;
 }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; }
 
-.toggle-switch { position: relative; width: 32px; height: 18px; display: inline-block; cursor: pointer; z-index: 10; }
-.toggle-switch input { opacity: 0; width: 100%; height: 100%; position: absolute; cursor: pointer; z-index: 11; margin: 0; }
-.slider { position: absolute; pointer-events: none; inset: 0; background-color: #333; border-radius: 20px; transition: .3s; }
-.slider:before { content: ""; position: absolute; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: #888; border-radius: 50%; transition: .3s; }
-input:checked + .slider { background-color: var(--accent); }
-input:checked + .slider:before { transform: translateX(14px); background-color: #000; }
+/* FIX: Toggles (Tightened) */
+.toggle-switch { 
+    position: relative; 
+    width: 40px; /* Reduced from 50+ to 40px fixed */
+    height: 22px; 
+    display: inline-block; 
+    cursor: pointer; 
+    z-index: 10; 
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.slider { 
+    position: absolute; pointer-events: none; inset: 0; 
+    background-color: #222; border-radius: 20px; 
+    transition: .3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border: 1px solid #333;
+}
+.slider:before { 
+    content: ""; position: absolute; 
+    height: 16px; width: 16px; 
+    left: 2px; bottom: 2px; 
+    background-color: #666; 
+    border-radius: 50%; 
+    transition: .3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+/* Snap Logic: 40px width - 2px border - 16px knob - 2px padding = ~20px move */
+input:checked + .slider { background-color: var(--accent); border-color: var(--accent); }
+input:checked + .slider:before { transform: translateX(18px); background-color: #000; }
 
-/* NEW: Card-Style Footer */
+/* FIX: Separated Footer Card */
 .sidebar-footer {
-    margin-top: 16px;
     padding: 16px;
-    background: rgba(255,255,255,0.03); /* Subtle sub-layer */
+    background: rgba(255,255,255,0.03); 
     border: 1px solid var(--glass-border);
     border-radius: 12px;
     font-size: 10px;
     color: #666;
     line-height: 1.5;
     text-align: left;
+    margin-top: 0; /* Divider handles spacing */
 }
 
 /* --- 5. FAB & MENUS --- */
@@ -216,70 +244,38 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
 }
 .zoom-icon-svg { width: 14px; height: 14px; color: var(--accent); stroke-width: 2; }
 
-/* NEW: Button-Style Credit Badge */
 .credit-badge {
     position: absolute; bottom: 24px; right: 24px;
-    background: #ffffff;
-    color: #000000;
-    font-size: 11px; 
-    font-weight: 700; 
-    text-decoration: none;
-    padding: 8px 16px;
-    border-radius: 100px;
+    background: #ffffff; color: #000000;
+    font-size: 11px; font-weight: 700; text-decoration: none;
+    padding: 8px 16px; border-radius: 100px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     transition: transform 0.2s, background 0.2s;
     letter-spacing: 0.5px;
 }
-.credit-badge:hover { 
-    transform: translateY(-2px); 
-    background: #f0f0f0;
-}
+.credit-badge:hover { transform: translateY(-2px); background: #f0f0f0; }
 
-/* --- 6. MOBILE RESPONSIVENESS (Top Header Handle) --- */
-#sheet-handle { display: none; } /* Hide old handle */
+/* --- 6. MOBILE RESPONSIVENESS --- */
+#sheet-handle { display: none; } 
 
 @media (max-width: 768px) {
     :root { --sidebar-width: 100%; --sidebar-margin: 0; }
 
     #sidebar {
-        /* Reset Desktop Centering */
-        position: fixed; 
-        top: auto; 
-        bottom: 0; 
-        left: 0; 
-        right: 0;
-        
-        /* Overwrite the translateY(-50%) from desktop */
+        position: fixed; top: auto; bottom: 0; left: 0; right: 0;
         transform: translateY(calc(100% - 70px)); 
-        
-        width: 100%;
-        height: auto;
-        max-height: 95vh;
-        
+        width: 100%; height: auto; max-height: 95vh;
         border-radius: 24px 24px 0 0;
         border: 1px solid var(--glass-border); border-bottom: none;
         box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
         padding-bottom: calc(20px + env(safe-area-inset-bottom));
-        transition: none; /* JS handles physics */
+        transition: none; 
     }
 
-    /* Make Header Look Clickable */
-    .sidebar-header {
-        cursor: grab;
-        /* Add a small visual indicator that it's draggable */
-        position: relative;
-    }
-    /* Add a small handle pill inside the header via CSS */
+    .sidebar-header { cursor: grab; position: relative; }
     .sidebar-header::after {
-        content: '';
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 36px;
-        height: 4px;
-        background: rgba(255,255,255,0.2);
-        border-radius: 10px;
+        content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+        width: 36px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 10px;
     }
 
     .zoom-badge { bottom: 90px; left: 20px; }
