@@ -12,8 +12,8 @@
     --success: #00ff88;
 
     /* Dimensions */
-    --sidebar-width: 290px; /* Slightly wider for breathing room */
-    --sidebar-margin: 32px; /* Increased margin to fix left-crop */
+    --sidebar-width: 290px;
+    --sidebar-margin: 32px;
     
     /* Animation */
     --ease-elastic: cubic-bezier(0.19, 1, 0.22, 1);
@@ -32,7 +32,7 @@ body {
     user-select: none;
 }
 
-/* --- 2. AUTH LAYOUT (Keeping Safe) --- */
+/* --- 2. AUTH LAYOUT (Unchanged) --- */
 .overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .glass-panel { background: #111; border: 1px solid #222; border-radius: 24px; box-shadow: 0 20px 80px rgba(0,0,0,0.6); }
 .auth-container { width: 100%; max-width: 380px; padding: 40px; text-align: center; position: relative; overflow: hidden; }
@@ -79,13 +79,16 @@ canvas { display: block; width: 100%; height: 100%; }
 /* --- 4. FLOATING SIDEBAR --- */
 #sidebar {
     position: absolute; 
-    top: var(--sidebar-margin); 
+    /* Desktop: Optical Vertical Center (45% from top) */
+    top: 45%; 
     left: var(--sidebar-margin); 
     width: var(--sidebar-width);
     
-    /* "Hug" Content Logic */
+    /* Center transform + Hug logic + Hardware Accel */
+    transform: translateY(-50%) translateZ(0);
+    
     height: auto; 
-    max-height: calc(100vh - (var(--sidebar-margin) * 2));
+    max-height: 85vh;
     
     background: var(--glass-panel);
     backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
@@ -95,9 +98,6 @@ canvas { display: block; width: 100%; height: 100%; }
     display: flex; flex-direction: column; 
     z-index: 100;
     box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    
-    /* Hardware acceleration to fix rendering crop */
-    transform: translateZ(0); 
 }
 
 .sidebar-header {
@@ -123,7 +123,6 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 .sidebar-content::-webkit-scrollbar { display: none; }
 
-/* Dividers & Sections */
 .sidebar-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 16px 0; width: 100%; }
 
 .section-label {
@@ -133,7 +132,6 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 .section-label svg { opacity: 0.8; width: 12px; height: 12px; }
 
-/* Controls */
 .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .control-row label { font-size: 12px; color: #ccc; font-weight: 500; min-width: 50px; }
 .slider-group { display: flex; align-items: center; gap: 8px; flex: 1; }
@@ -161,7 +159,6 @@ input[type=color] {
     border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; box-shadow: 0 0 0 1px #333;
 }
 
-/* Toggles */
 .toggle-switch { position: relative; width: 32px; height: 18px; display: inline-block; cursor: pointer; z-index: 10; }
 .toggle-switch input { opacity: 0; width: 100%; height: 100%; position: absolute; cursor: pointer; z-index: 11; margin: 0; }
 .slider { position: absolute; pointer-events: none; inset: 0; background-color: #333; border-radius: 20px; transition: .3s; }
@@ -169,9 +166,20 @@ input[type=color] {
 input:checked + .slider { background-color: var(--accent); }
 input:checked + .slider:before { transform: translateX(14px); background-color: #000; }
 
-.sidebar-footer { margin-top: 10px; padding-top: 20px; border-top: 1px solid var(--glass-border); font-size: 9px; color: #444; text-align: center; letter-spacing: 0.5px; }
+/* NEW: Card-Style Footer */
+.sidebar-footer {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(255,255,255,0.03); /* Subtle sub-layer */
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    font-size: 10px;
+    color: #666;
+    line-height: 1.5;
+    text-align: left;
+}
 
-/* --- 5. FAB & EXPORT MENU --- */
+/* --- 5. FAB & MENUS --- */
 .fab-container { position: absolute; top: 20px; right: 20px; z-index: 50; }
 .fab {
     width: 44px; height: 44px; background: #111; border: 1px solid #333;
@@ -180,7 +188,6 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
 }
 .fab:hover { background: #222; border-color: #555; }
 
-/* Updated Export Menu */
 .export-menu {
     position: absolute; top: 54px; right: 0; width: 180px;
     background: #111; border: 1px solid #333; border-radius: 12px;
@@ -195,12 +202,9 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
 .menu-item:hover { background: #222; color: #fff; }
 .menu-item.highlight { color: var(--accent); }
 .menu-divider { height: 1px; background: #222; margin: 4px 0; }
-
-/* Icons in Menu */
 .menu-icon-svg { opacity: 0.5; width: 14px; height: 14px; stroke-width: 2.5; }
 .menu-item:hover .menu-icon-svg { opacity: 1; }
 
-/* Zoom Badge - Fixed Bottom Left */
 .zoom-badge {
     position: absolute; bottom: 24px; left: 24px;
     background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid #333;
@@ -212,44 +216,73 @@ input:checked + .slider:before { transform: translateX(14px); background-color: 
 }
 .zoom-icon-svg { width: 14px; height: 14px; color: var(--accent); stroke-width: 2; }
 
+/* NEW: Button-Style Credit Badge */
 .credit-badge {
     position: absolute; bottom: 24px; right: 24px;
-    font-size: 10px; color: #444; text-decoration: none; font-weight: 600;
-    transition: color 0.2s;
+    background: #ffffff;
+    color: #000000;
+    font-size: 11px; 
+    font-weight: 700; 
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 100px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: transform 0.2s, background 0.2s;
+    letter-spacing: 0.5px;
 }
-.credit-badge:hover { color: var(--accent); }
+.credit-badge:hover { 
+    transform: translateY(-2px); 
+    background: #f0f0f0;
+}
 
-/* --- 6. MOBILE RESPONSIVENESS (BottomSheet Logic) --- */
-#sheet-handle { display: none; }
+/* --- 6. MOBILE RESPONSIVENESS (Top Header Handle) --- */
+#sheet-handle { display: none; } /* Hide old handle */
 
 @media (max-width: 768px) {
     :root { --sidebar-width: 100%; --sidebar-margin: 0; }
 
     #sidebar {
-        /* Bottom Sheet Fixed Position */
-        position: fixed; top: auto; left: 0; right: 0; bottom: 0;
+        /* Reset Desktop Centering */
+        position: fixed; 
+        top: auto; 
+        bottom: 0; 
+        left: 0; 
+        right: 0;
+        
+        /* Overwrite the translateY(-50%) from desktop */
+        transform: translateY(calc(100% - 70px)); 
+        
         width: 100%;
         height: auto;
-        max-height: 95vh; /* Allow near full screen */
+        max-height: 95vh;
         
         border-radius: 24px 24px 0 0;
         border: 1px solid var(--glass-border); border-bottom: none;
         box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-        
-        /* Start hidden/collapsed (handled by JS later, but default here) */
-        transform: translateY(calc(100% - 70px)); 
         padding-bottom: calc(20px + env(safe-area-inset-bottom));
-        transition: none; /* JS will handle physics */
+        transition: none; /* JS handles physics */
     }
 
-    #sheet-handle {
-        display: block; width: 36px; height: 4px;
-        background: #444; border-radius: 10px; margin: 12px auto 8px; cursor: grab;
+    /* Make Header Look Clickable */
+    .sidebar-header {
+        cursor: grab;
+        /* Add a small visual indicator that it's draggable */
+        position: relative;
+    }
+    /* Add a small handle pill inside the header via CSS */
+    .sidebar-header::after {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 4px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 10px;
     }
 
-    /* Move Zoom UP so it floats above the 'Peeking' sheet */
     .zoom-badge { bottom: 90px; left: 20px; }
-    
     .fab-container { top: 20px; right: 20px; }
     .credit-badge { display: none; } 
     
