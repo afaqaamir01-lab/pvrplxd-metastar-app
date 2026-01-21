@@ -1,7 +1,7 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
  * Handles Auth (Split Flow), Animations, and Core Injection
- * Updated: v3.4 (Sidebar Logic Adjusted for Hugged Layout)
+ * Updated: v4.2 (Auth Preserved + 3-Point Sheet + Clean Loader)
  */
 
 // --- CONFIGURATION ---
@@ -56,6 +56,7 @@ const els = {
 // --- UI & ANIMATION CONTROLLER ---
 const UI = {
     intro: () => {
+        // Updated selector to match your HTML class (.auth-container)
         gsap.set(".auth-container", { y: 30, opacity: 0 }); 
         gsap.to(".auth-container", { y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 });
     },
@@ -79,7 +80,7 @@ const UI = {
 
     // 3. SHOW ACTIVE LICENSE (Standard Flow)
     showLicenseCard: (productName, email) => {
-        if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access"; // Hardcoded as requested
+        if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access"; 
         if(els.licenseEmail) els.licenseEmail.innerText = email;
         
         // Success State Visuals
@@ -113,7 +114,7 @@ const UI = {
         els.btnSend.style.display = 'none';
     },
 
-    // 5. SHOW TERMINATED ERROR (New Request)
+    // 5. SHOW TERMINATED ERROR
     showTerminatedError: (email) => {
         UI.switchView('view-license');
         if(els.authSubtitle) els.authSubtitle.innerText = "Access Revoked";
@@ -131,7 +132,7 @@ const UI = {
         els.btnSend.style.background = 'var(--bg-app)'; 
         els.btnSend.style.border = '1px solid #333';
         els.btnSend.style.color = '#fff';
-        els.btnSend.innerHTML = '<span>Contact Support to Resolve</span>';
+        els.btnSend.innerHTML = '<span>Contact Support</span>';
         
         // Bind Contact Action
         els.btnSend.onclick = () => {
@@ -165,40 +166,55 @@ const UI = {
         }
     },
 
-    // UPDATED: Dynamic Sidebar Height Calculation
+    // --- NEW: 3-POINT MOBILE SHEET SNAP LOGIC ---
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
-        const sidebar = document.getElementById('sidebar');
         
-        // Calculate the translation needed to hide everything but the top 70px (header)
-        const calculateBounds = () => {
-             const h = sidebar.offsetHeight;
-             return -(h - 70); // Negative value moves it UP
+        const sidebar = document.getElementById('sidebar');
+        const handle = document.getElementById('sheet-handle');
+        
+        if (!sidebar || !handle || typeof Draggable === 'undefined') return;
+
+        // Dynamic Snap Point Calculation
+        const getSnapPoints = () => {
+            const h = window.innerHeight;
+            const sheetH = sidebar.scrollHeight; 
+            const peekH = 70 + (parseInt(getComputedStyle(document.body).paddingBottom) || 0);
+            
+            // 1. Peek: Header only (y=0)
+            const minY = 0; 
+            
+            // 2. Full: Expanded near top
+            const maxUp = -Math.min(sheetH - peekH, h * 0.85); 
+            
+            // 3. Half: Mid-screen
+            const midUp = maxUp * 0.55; 
+
+            return { minY, midUp, maxUp };
         };
 
-        if (typeof Draggable !== 'undefined') {
-            Draggable.create(sidebar, {
-                type: "y", 
-                trigger: "#sheet-handle", 
-                // Dynamically refresh bounds on drag start in case content changed
-                onPress: function() {
-                    const limit = calculateBounds();
-                    this.applyBounds({ minY: limit, maxY: 0 });
-                },
-                inertia: true, 
-                edgeResistance: 0.8,
-                onDragEnd: function() {
-                    const limit = calculateBounds();
-                    const y = this.y;
-                    // Snap to Open (limit) or Closed (0)
-                    gsap.to(this.target, { 
-                        y: (y < limit * 0.25) ? limit : 0, 
-                        duration: 0.5, 
-                        ease: "power3.out" 
-                    });
+        Draggable.create(sidebar, {
+            type: "y",
+            trigger: handle,
+            inertia: true,
+            edgeResistance: 0.7,
+            onPress: function() {
+                const { maxUp } = getSnapPoints();
+                this.applyBounds({ minY: maxUp, maxY: 0 });
+            },
+            snap: {
+                y: function(endValue) {
+                    const { midUp, maxUp } = getSnapPoints();
+                    const distToZero = Math.abs(endValue - 0);
+                    const distToMid = Math.abs(endValue - midUp);
+                    const distToMax = Math.abs(endValue - maxUp);
+
+                    if (distToMax < distToMid && distToMax < distToZero) return maxUp; // Full
+                    if (distToMid < distToZero) return midUp; // Half
+                    return 0; // Peek
                 }
-            });
-        }
+            }
+        });
     },
 
     showResume: (email) => {
@@ -435,6 +451,7 @@ function unlockApp() {
 
 function loadProtectedCore() {
     const headers = getAuthHeaders();
+    // CLEAN NATIVE LOADER (No Injection needed, since core.js is updated)
     fetch(`${API_URL}/core.js`, { headers: headers })
     .then(res => {
         if (res.status === 401 || res.status === 403) throw new Error("Auth Failed");
