@@ -1,7 +1,7 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
  * Handles Auth (Split Flow), Animations, and Core Injection
- * Updated: v3.3 (Final: Live Session Check + Termination Logic + Cleanup)
+ * Updated: v3.4 (Sidebar Logic Adjusted for Hugged Layout)
  */
 
 // --- CONFIGURATION ---
@@ -56,8 +56,8 @@ const els = {
 // --- UI & ANIMATION CONTROLLER ---
 const UI = {
     intro: () => {
-        gsap.set(".auth-card", { y: 30, opacity: 0 }); 
-        gsap.to(".auth-card", { y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 });
+        gsap.set(".auth-container", { y: 30, opacity: 0 }); 
+        gsap.to(".auth-container", { y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 });
     },
 
     switchView: (viewId) => {
@@ -150,7 +150,7 @@ const UI = {
         tl.to("#auth-layer", { opacity: 0, duration: 0.5, pointerEvents: "none" })
           .set("#auth-layer", { display: "none" })
           .set("#main-ui", { visibility: "visible" })
-          .from("#sidebar", { x: -340, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
+          .from("#sidebar", { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
           .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
           .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
     },
@@ -165,17 +165,37 @@ const UI = {
         }
     },
 
+    // UPDATED: Dynamic Sidebar Height Calculation
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const sidebar = document.getElementById('sidebar');
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const OPEN_Y = -(vh - 80); 
+        
+        // Calculate the translation needed to hide everything but the top 70px (header)
+        const calculateBounds = () => {
+             const h = sidebar.offsetHeight;
+             return -(h - 70); // Negative value moves it UP
+        };
+
         if (typeof Draggable !== 'undefined') {
             Draggable.create(sidebar, {
-                type: "y", trigger: "#sheet-handle", bounds: { minY: OPEN_Y, maxY: 0 }, inertia: true, edgeResistance: 0.8,
+                type: "y", 
+                trigger: "#sheet-handle", 
+                // Dynamically refresh bounds on drag start in case content changed
+                onPress: function() {
+                    const limit = calculateBounds();
+                    this.applyBounds({ minY: limit, maxY: 0 });
+                },
+                inertia: true, 
+                edgeResistance: 0.8,
                 onDragEnd: function() {
+                    const limit = calculateBounds();
                     const y = this.y;
-                    gsap.to(this.target, { y: (y < OPEN_Y * 0.25) ? OPEN_Y : 0, duration: 0.5, ease: "power3.out" });
+                    // Snap to Open (limit) or Closed (0)
+                    gsap.to(this.target, { 
+                        y: (y < limit * 0.25) ? limit : 0, 
+                        duration: 0.5, 
+                        ease: "power3.out" 
+                    });
                 }
             });
         }
