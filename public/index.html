@@ -1,214 +1,242 @@
-// NOTE: Deployed on Cloudflare Workers
-// REPLACES: The previous worker.js (Removed Storage + Added Split Auth)
-
-// --- 1. CONFIGURATION ---
-// Ensure these match your Cloudflare Environment Variables exactly
-// WHOP_COMPANY_ID, WHOP_PRODUCT_ID, WHOP_API_KEY, RESEND_API_KEY, JWT_SECRET
-
-// --- 2. HELPER: DYNAMIC CORS ---
-function getCorsHeaders(request) {
-    const origin = request.headers.get("Origin");
-    return {
-        "Access-Control-Allow-Origin": origin || "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "true" 
-    };
-}
-
-function json(data, status = 200, headers = {}) {
-  return new Response(JSON.stringify(data), { 
-    headers: { ...headers, 'Content-Type': 'application/json' }, 
-    status 
-  });
-}
-
-// --- 3. HELPER: WHOP LICENSE CHECKER ---
-async function checkWhopLicense(email, env) {
-    const companyId = env.WHOP_COMPANY_ID; 
-    const requiredProductId = env.WHOP_PRODUCT_ID ? env.WHOP_PRODUCT_ID.trim() : null;
-
-    if (!companyId || !requiredProductId) throw new Error("Server Config Error");
-
-    const whopRes = await fetch(`https://api.whop.com/v1/memberships?email=${encodeURIComponent(email)}&company_id=${companyId}`, {
-        headers: { 'Authorization': `Bearer ${env.WHOP_API_KEY}` }
-    });
-
-    if (!whopRes.ok) return { valid: false, error: "Provider Error" };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050505">
+    <meta name="description" content="MetaStar Studio Pro - Web-based Vector Manipulation Engine">
     
-    const whopData = await whopRes.json();
+    <title>MetaStar Studio Pro</title>
     
-    // Strict Empty Check: If no memberships exist at all, fail immediately
-    if (!whopData.data || !Array.isArray(whopData.data) || whopData.data.length === 0) {
-        return { valid: false };
-    }
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js" defer></script>
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
 
-    const validStatuses = ['active', 'trialing', 'paid_subscriber', 'completed'];
-
-    // Find the specific matching product
-    const match = whopData.data.find(m => {
-        // IDs can be in m.product_id OR m.product.id depending on API version
-        const pId = m.product_id || (m.product && m.product.id);
-        const eId = m.experience_id || (m.experience && m.experience.id);
-        
-        const isTarget = (pId === requiredProductId) || (eId === requiredProductId);
-        return isTarget && validStatuses.includes(m.status);
-    });
-
-    if (match) {
-        // Return success and try to grab the plan name for UI display
-        const planName = (match.plan && match.plan.name) ? match.plan.name : "Pro License";
-        return { valid: true, productName: planName };
-    }
-
-    return { valid: false };
-}
-
-// --- 4. WORKER LOGIC ---
-export default {
-  async fetch(request, env, ctx) {
-    const corsHeaders = getCorsHeaders(request);
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
-    const url = new URL(request.url);
-    const path = url.pathname;
-
-    // --- ROUTE 1: HEALTH CHECK ---
-    if (path === "/health") {
-        const isMaintenance = await env.AUTH.get("maintenance");
-        return json({ status: "ok", maintenance: isMaintenance === "true" }, 200, corsHeaders);
-    }
-
-    // --- ROUTE 2: CHECK LICENSE (Gatekeeper) ---
-    // User enters email -> This runs. No email sent yet.
-    if (path === "/auth/check" && request.method === "POST") {
-        try {
-            const { email } = await request.json();
-            if (!email) return json({ message: "Email required" }, 400, corsHeaders);
-
-            const result = await checkWhopLicense(email, env);
+    <div id="auth-layer" class="overlay">
+        <div class="glass-panel auth-container">
             
-            if (result.valid) {
-                return json({ success: true, product: result.productName }, 200, corsHeaders);
-            } else {
-                // Return 403 so UI knows to show "No License" error
-                return json({ message: "No active subscription found.", code: "NO_SUBSCRIPTION" }, 403, corsHeaders);
-            }
-        } catch (e) {
-            return json({ message: "Check failed" }, 500, corsHeaders);
-        }
-    }
+            <div class="auth-header">
+                <div class="logo-text">METASTAR</div>
+                <p id="auth-subtitle">Professional Studio Access</p>
+            </div>
 
-    // --- ROUTE 3: SEND OTP (The Action) ---
-    // User clicks "Verify" on the License Card -> This runs.
-    if (path === "/auth/send" && request.method === "POST") {
-      try {
-        const { email } = await request.json();
+            <div id="view-email" class="auth-view active">
+                <div class="input-wrapper">
+                    <input type="email" id="email-input" class="modern-input" placeholder="name@example.com" autocomplete="email" inputmode="email">
+                    <div class="input-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    </div>
+                </div>
+                
+                <button id="btn-check-license" class="primary-btn">
+                    <span>Check License</span>
+                    <div class="btn-loader"></div>
+                </button>
+
+                <button id="btn-purchase" class="text-link" style="display: none; margin-top: 15px; color: var(--accent);">
+                    No License? Get Access Here &rarr;
+                </button>
+            </div>
+
+            <div id="view-license" class="auth-view hidden" style="text-align: center;">
+                
+                <div class="icon-stage">
+                    <div id="icon-check" class="status-icon success">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                    <div id="icon-alert" class="status-icon error" style="display: none;">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    </div>
+                </div>
+
+                <div id="license-msg-header" class="msg-header">Active License Found</div>
+                
+                <div class="license-card-detail">
+                    <div class="detail-label">PRODUCT</div>
+                    <div id="license-product-name" class="detail-value highlight">MetaStar Engine</div>
+                    
+                    <div class="detail-label" style="margin-top: 8px;">LINKED ACCOUNT</div>
+                    <div id="license-email-display" class="detail-value muted">user@example.com</div>
+                </div>
+
+                <button id="btn-send-otp" class="primary-btn">
+                    <span>Verify It's You</span>
+                    <div class="btn-loader"></div>
+                </button>
+                
+                <button id="btn-back-email" class="text-link" style="margin-top: 16px;">
+                    Use different email
+                </button>
+            </div>
+
+            <div id="view-verify" class="auth-view hidden">
+                <div class="otp-instruction">
+                    Enter the code sent to <span id="otp-email-target" style="color: #fff;">email</span>
+                </div>
+                
+                <div class="otp-group" id="otp-container">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
+                </div>
+                
+                <button id="btn-verify" class="primary-btn">
+                    <span>Unlock Engine</span>
+                    <div class="btn-loader"></div>
+                </button>
+                
+                <div id="retry-counter" style="font-size: 10px; color: var(--danger); margin-top: 10px; height: 12px;"></div>
+
+                <div class="auth-footer">
+                    <button id="btn-resend" class="text-link">Resend Code</button>
+                    <span class="divider">•</span>
+                    <button id="btn-reset-auth" class="text-link">Cancel</button>
+                </div>
+            </div>
+
+            <div id="view-resume" class="auth-view hidden" style="text-align: center;">
+                <div style="margin-bottom: 16px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <div style="font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px;">Welcome Back</div>
+                <div id="resume-email" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;"></div>
+                
+                <div style="width: 100%; height: 2px; background: #222; border-radius: 2px; overflow: hidden; position: relative;">
+                    <div id="resume-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); transition: width 1.5s ease-in-out;"></div>
+                </div>
+                
+                <div style="margin-top: 12px; font-size: 10px; color: #444;">RESTORING WORKSPACE...</div>
+            </div>
+
+            <div id="status-msg" class="status-toast"></div>
+        </div>
+    </div>
+
+    <div id="main-ui" style="visibility: hidden;">
         
-        // A. Security: Rate Limiting
-        const today = new Date().toISOString().split('T')[0];
-        const sendCount = parseInt(await env.AUTH.get(`sends:${email}:${today}`) || "0");
-        if (sendCount >= 8) return json({ message: "Daily limit reached." }, 429, corsHeaders);
-
-        // B. Security: Re-Verify License (Prevent API Bypassing)
-        const check = await checkWhopLicense(email, env);
-        if (!check.valid) {
-            return json({ message: "License validation failed." }, 403, corsHeaders);
-        }
-
-        // C. Generate & Save OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        await env.AUTH.put(`otp:${email}`, JSON.stringify({ code: otp, attempts: 0 }), { expirationTtl: 300 });
-        await env.AUTH.put(`sends:${email}:${today}`, (sendCount + 1).toString(), { expirationTtl: 86400 });
-
-        // D. Send Email
-        await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                from: "MetaStar Security <auth@metastar.site>", 
-                to: email, 
-                subject: `Your Access Code: ${otp}`, 
-                html: `
-                <div style="font-family: sans-serif; text-align: center; padding: 20px;">
-                    <h2>MetaStar Studio</h2>
-                    <p>Your verification code is:</p>
-                    <h1 style="font-size: 32px; letter-spacing: 5px; color: #000;">${otp}</h1>
-                    <p style="color: #888; font-size: 12px;">This code expires in 5 minutes.</p>
-                </div>`
-            })
-        });
-
-        return json({ success: true }, 200, corsHeaders);
-
-      } catch (e) { return json({ message: "Server Error" }, 500, corsHeaders); }
-    }
-
-    // --- ROUTE 4: VERIFY OTP ---
-    if (path === "/auth/verify" && request.method === "POST") {
-        try {
-            const { email, code } = await request.json();
-            const otpDataStr = await env.AUTH.get(`otp:${email}`);
+        <main id="viewport">
+            <canvas id="canvas"></canvas>
             
-            if (!otpDataStr) return json({ message: "Code expired." }, 403, corsHeaders);
-            const otpData = JSON.parse(otpDataStr);
+            <div class="zoom-badge" id="zoomBadge">
+                <span class="icon">🔍</span>
+                <span id="zoom-val">100%</span>
+            </div>
+        </main>
 
-            if (otpData.code !== code) {
-                otpData.attempts++;
-                await env.AUTH.put(`otp:${email}`, JSON.stringify(otpData), { expirationTtl: 300 });
-                return json({ message: "Incorrect code", attemptsRemaining: 3 - otpData.attempts }, 400, corsHeaders);
-            }
+        <div class="fab-container">
+            <button class="fab" id="btn-export-trigger" title="Export">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
+            <div class="export-menu" id="export-menu">
+                <button class="menu-item" data-fmt="png">Save PNG</button>
+                <button class="menu-item" data-fmt="jpg">Save JPG</button>
+                <div class="menu-divider"></div>
+                <button class="menu-item highlight" data-fmt="svg">Export SVG</button>
+            </div>
+        </div>
 
-            await env.AUTH.delete(`otp:${email}`);
-
-            // JWT Generation
-            const secret = new TextEncoder().encode(env.JWT_SECRET);
-            const payload = { sub: email, exp: Math.floor(Date.now() / 1000) + 604800 }; 
-            const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-            const body = btoa(JSON.stringify(payload));
-            const sig = await crypto.subtle.sign("HMAC", await crypto.subtle.importKey("raw", secret, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]), new TextEncoder().encode(`${header}.${body}`));
-            const token = `${header}.${body}.${btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')}`;
-
-            return json({ valid: true, token: token }, 200, corsHeaders);
-
-        } catch (e) { return json({ message: "Verify failed" }, 500, corsHeaders); }
-    }
-
-    // --- ROUTE 5: VALIDATE SESSION ---
-    if (path === "/auth/validate" && request.method === "POST") {
-        const authHeader = request.headers.get("Authorization");
-        let token = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
-        
-        if (!token) return json({ valid: false }, 200, corsHeaders);
-
-        // Simple Local Verification (Fast)
-        try {
-            const [h, b, s] = token.split('.');
-            const payload = JSON.parse(atob(b));
-            if (Date.now() / 1000 > payload.exp) throw new Error("Expired");
-            return json({ valid: true, email: payload.sub }, 200, corsHeaders);
-        } catch(e) {
-            return json({ valid: false }, 200, corsHeaders);
-        }
-    }
-
-    // --- ROUTE 6: SERVE CORE ---
-    if (path === "/core.js") {
-        const authHeader = request.headers.get("Authorization");
-        if (!authHeader) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-        
-        try {
-            let object = await env.ASSETS.get("core.js"); 
-            if (object === null) object = await env.ASSETS.get("v2/core.js"); 
-            if (object === null) return new Response("Core not found", { status: 404, headers: corsHeaders });
+        <aside id="sidebar">
+            <div id="sheet-handle"></div>
             
-            const headers = new Headers(corsHeaders);
-            object.writeHttpMetadata(headers);
-            headers.set("etag", object.httpEtag);
-            return new Response(object.body, { headers });
-        } catch (e) { return new Response("Storage Error", { status: 500, headers: corsHeaders }); }
-    }
-  
-    return new Response("Not Found", { status: 404, headers: corsHeaders });
-  }
-};
+            <div class="sidebar-header">
+                <span class="brand">CONTROLS</span>
+                <div class="header-tools">
+                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">↺</button>
+                    <button class="save-btn" id="btn-save">SAVE</button>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="control-section">
+                    <div class="section-label">Geometry</div>
+                    <div class="control-row">
+                        <label>Top</label>
+                        <div class="slider-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Right</label>
+                        <div class="slider-group"><input type="range" id="r-r" min="10" max="600"><input type="number" id="n-r"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Bottom</label>
+                        <div class="slider-group"><input type="range" id="r-b" min="10" max="600"><input type="number" id="n-b"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Left</label>
+                        <div class="slider-group"><input type="range" id="r-l" min="10" max="600"><input type="number" id="n-l"></div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-label">Transform</div>
+                    <div class="control-row">
+                        <label>Skew X</label>
+                        <div class="slider-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Skew Y</label>
+                        <div class="slider-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Scale</label>
+                        <div class="slider-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Curve</label>
+                        <div class="slider-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-label">Style</div>
+                    <div class="control-row">
+                        <label>Grid</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="checkGrid" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="control-row">
+                        <label>Bones</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="checkBones">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="control-row">
+                        <label>Fill</label>
+                        <input type="color" id="starCol" value="#dfff00">
+                    </div>
+                    <div class="control-row">
+                        <label>BG</label>
+                        <input type="color" id="bgCol" value="#050505">
+                    </div>
+                </div>
+                
+                <div class="sidebar-footer">
+                    MetaStar Engine v2.1
+                </div>
+            </div>
+        </aside>
+
+        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">
+            By Pvrplxd
+        </a>
+    </div>
+
+    <script src="js/app.js" defer></script>
+</body>
+</html>
