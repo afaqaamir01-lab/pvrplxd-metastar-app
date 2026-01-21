@@ -200,11 +200,11 @@ input:checked + .slider:before { transform: translateX(18px); background-color: 
     background: rgba(255,255,255,0.03); 
     border: 1px solid var(--glass-border);
     border-radius: 12px;
-    font-size: 10px;
+    font-size: 12px;
     color: #666;
     line-height: 1.5;
     text-align: left;
-    margin-top: 0; /* Divider handles spacing */
+    margin-top: 4; /* Divider handles spacing */
 }
 
 /* --- 5. FAB & MENUS --- */
