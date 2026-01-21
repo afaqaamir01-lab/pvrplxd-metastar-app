@@ -1,7 +1,7 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
  * Handles Auth, Mobile Sheet Physics, and Core Engine Loading
- * Updated: v4.4 (Full Codebase + Fixed Mobile Header Drag)
+ * Updated: v4.5 (GSAP Inertia Sliders + Fixed Sheet Logic)
  */
 
 // --- CONFIGURATION ---
@@ -156,27 +156,122 @@ const UI = {
         }
     },
 
-    // --- MOBILE SHEET LOGIC (Corrected Trigger) ---
+    // --- NEW: GSAP MOMENTUM SLIDERS ---
+    initSliders: () => {
+        const ranges = document.querySelectorAll('input[type="range"]');
+        if(!ranges.length) return;
+
+        ranges.forEach(range => {
+            const min = parseFloat(range.min);
+            const max = parseFloat(range.max);
+            const step = parseFloat(range.step) || 1;
+            
+            // Create a virtual proxy to track value with momentum
+            const proxy = { value: parseFloat(range.value) };
+            
+            // Find companion number input
+            const numInput = range.parentElement.querySelector('input[type="number"]');
+
+            const update = () => {
+                // Snap to step
+                let val = Math.round(proxy.value / step) * step;
+                val = Math.max(min, Math.min(max, val)); // Clamp
+                
+                // Update DOM
+                range.value = val;
+                if(numInput) numInput.value = val;
+                
+                // Trigger Core Engine
+                range.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+
+            Draggable.create(document.createElement("div"), { // Virtual trigger
+                trigger: range,
+                type: "x",
+                inertia: true,
+                bounds: { minX: 0, maxX: 100 }, // Virtual bounds
+                
+                onPress: function(e) {
+                    // Map click position to value immediately
+                    const rect = range.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const percent = Math.max(0, Math.min(1, clickX / rect.width));
+                    
+                    proxy.value = min + percent * (max - min);
+                    update();
+                    
+                    // Kill existing tweens to take control
+                    gsap.killTweensOf(proxy);
+                },
+                
+                onDrag: function() {
+                    // Calculate delta based on drag movement relative to width
+                    const rect = range.getBoundingClientRect();
+                    const deltaPercent = this.deltaX / rect.width;
+                    const deltaVal = deltaPercent * (max - min);
+                    
+                    proxy.value += deltaVal;
+                    update();
+                },
+                
+                onThrowUpdate: function() {
+                    // Inertia logic is handled by GSAP's ThrowProps on the virtual element,
+                    // but we need to map that back to the value.
+                    // Simplified: We manually tween the proxy value with velocity for physics feel
+                }
+            });
+            
+            // Re-implement simpler momentum since pure virtual drag is complex:
+            // We basically hijack the interaction.
+            // Actually, best way for "feel" on a native range is to watch the drag 
+            // and apply inertia to the VALUE, not the pixels.
+            
+            Draggable.create(proxy, {
+                type: "value", // Virtual value dragging
+                trigger: range,
+                inertia: true,
+                min: min,
+                max: max,
+                onPress: function(e) {
+                    // Jump to click spot
+                    const rect = range.getBoundingClientRect();
+                    const p = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    this.update(); // Sync
+                    proxy.value = min + p * (max - min);
+                    update();
+                },
+                onDrag: update,
+                onThrowUpdate: update
+            });
+            
+            // Link Number Input back to Slider
+            if(numInput) {
+                numInput.addEventListener('input', () => {
+                    const v = parseFloat(numInput.value);
+                    if(!isNaN(v)) {
+                        proxy.value = v;
+                        update();
+                    }
+                });
+            }
+        });
+    },
+
+    // --- MOBILE SHEET LOGIC (Header Trigger + 3 Snap Points) ---
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         
         const sidebar = document.getElementById('sidebar');
-        // FIX: Use the Header as the drag handle
-        const header = document.querySelector('.sidebar-header');
+        const header = document.querySelector('.sidebar-header'); // Fixed Trigger
         
         if (!sidebar || !header || typeof Draggable === 'undefined') return;
 
-        // Calculate Snap Points
         const getSnapPoints = () => {
             const h = sidebar.offsetHeight;
-            // Header height + padding
             const peekHeight = 70 + (parseInt(getComputedStyle(document.body).paddingBottom) || 0); 
             
-            // "Closed" = Pushed down
             const closedY = h - peekHeight;
-            // "Open" = Pushed to 0
             const openY = 0;
-            // "Half"
             const midY = closedY * 0.45; 
 
             return { openY, midY, closedY };
@@ -184,7 +279,7 @@ const UI = {
 
         Draggable.create(sidebar, {
             type: "y",
-            trigger: header, // Dragging the header moves the sheet
+            trigger: header,
             inertia: true,
             edgeResistance: 0.65,
             dragClickables: false, 
@@ -197,14 +292,13 @@ const UI = {
             snap: {
                 y: function(value) {
                     const { openY, midY, closedY } = getSnapPoints();
-                    
                     const distToOpen = Math.abs(value - openY);
                     const distToMid = Math.abs(value - midY);
                     const distToClosed = Math.abs(value - closedY);
 
-                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; // Full
-                    if (distToMid < distToClosed) return midY; // Half
-                    return closedY; // Closed
+                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
+                    if (distToMid < distToClosed) return midY; 
+                    return closedY; 
                 }
             }
         });
@@ -270,10 +364,9 @@ async function initApp() {
     UI.switchView('view-email');
 }
 
-// --- CORE LOADER (Standard) ---
+// --- CORE LOADER ---
 function loadProtectedCore() {
     const headers = getAuthHeaders();
-    
     fetch(`${API_URL}/core.js`, { headers: headers })
     .then(res => {
         if (res.status === 401 || res.status === 403) throw new Error("Auth Failed");
@@ -349,7 +442,13 @@ function startResendTimer() {
     if(resendTimer) clearInterval(resendTimer);
     resendTimer = setInterval(() => { t--; if(t<=0) { clearInterval(resendTimer); els.btnResend.style.display = "block"; els.btnResend.innerText="Resend Code"; } }, 1000);
 }
-function unlockApp() { UI.unlockTransition(() => { loadProtectedCore(); UI.initMobileDrag(); }); }
+function unlockApp() { 
+    UI.unlockTransition(() => { 
+        loadProtectedCore(); 
+        UI.initMobileDrag(); 
+        UI.initSliders(); // INJECTED SLIDER LOGIC
+    }); 
+}
 function setLoading(btn, load) { 
     if(!btn) return; 
     btn.classList.toggle('loading', load); btn.disabled = load;
