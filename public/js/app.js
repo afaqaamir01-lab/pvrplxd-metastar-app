@@ -82,7 +82,7 @@ const UI = {
 
     // 3. License Card Animation
     showLicenseCard: (productName, email) => {
-        if(els.licenseProd) els.licenseProd.innerText = productName;
+        if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access";
         if(els.licenseEmail) els.licenseEmail.innerText = email;
         
         // Reset Icons
