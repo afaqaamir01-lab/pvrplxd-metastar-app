@@ -1,7 +1,7 @@
 /**
  * METASTAR STUDIO PRO - Main Controller
- * Handles Auth, Animations, and Core Injection
- * Updated: v2.3 (Fixed OTP Collection & Input Logic)
+ * Handles Auth (Split Flow), Animations, and Core Injection
+ * Updated: v3.0 (Fixed Session Resume & License Check)
  */
 
 // --- CONFIGURATION ---
@@ -11,25 +11,38 @@ const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/";
 // --- STATE ---
 let userEmail = "";
 let resendTimer = null;
-let msToken = null; // Hybrid Auth Token (Memory Fallback)
+let msToken = localStorage.getItem("ms_token"); // Persist session
 
 // --- DOM ELEMENTS ---
 const els = {
+    // Inputs
     emailInput: document.getElementById('email-input'),
-    // FIXED: Removed single codeInput, we now reference the container
     otpContainer: document.getElementById('otp-container'), 
-    btnOtp: document.getElementById('btn-otp'),
-    btnVerify: document.getElementById('btn-verify'),
-    statusMsg: document.getElementById('status-msg'),
-    exportPop: document.getElementById('export-pop'),
-    authSubtitle: document.getElementById('auth-subtitle'),
     
-    // UI Extras
-    btnPurchase: document.getElementById('btn-purchase'),
+    // Views
+    viewEmail: document.getElementById('view-email'),
+    viewLicense: document.getElementById('view-license'),
+    viewVerify: document.getElementById('view-verify'),
+    viewResume: document.getElementById('view-resume'),
+
+    // Buttons
+    btnCheck: document.getElementById('btn-check-license'), // Step 1
+    btnSend: document.getElementById('btn-send-otp'),     // Step 2
+    btnVerify: document.getElementById('btn-verify'),     // Step 3
     btnResend: document.getElementById('btn-resend'),
+    btnBackEmail: document.getElementById('btn-back-email'),
+    btnResetAuth: document.getElementById('btn-reset-auth'),
+    btnPurchase: document.getElementById('btn-purchase'),
+    
+    // Status & Text
+    statusMsg: document.getElementById('status-msg'),
+    authSubtitle: document.getElementById('auth-subtitle'),
+    licenseProd: document.getElementById('license-product-name'),
+    licenseEmail: document.getElementById('license-email-display'),
+    otpTarget: document.getElementById('otp-email-target'),
     retryCounter: document.getElementById('retry-counter'),
     
-    // Sidebar
+    // UI Extras
     sidebar: document.getElementById('sidebar'),
     zoomVal: document.getElementById('zoomBadge')
 };
@@ -44,38 +57,56 @@ const UI = {
         });
     },
 
-    // 2. Slide Logic (Email <-> Code)
-    slideAuth: (toVerify = true) => {
-        // Simple visibility toggle since specific ID sliders aren't in your HTML
-        const viewEmail = document.getElementById('view-email');
-        const viewVerify = document.getElementById('view-verify');
+    // 2. View Switcher (The Core Transition Logic)
+    switchView: (viewId) => {
+        const views = [els.viewEmail, els.viewLicense, els.viewVerify, els.viewResume];
+        const target = document.getElementById(viewId);
 
-        if (toVerify) {
-            // Hide Email View
-            viewEmail.classList.add('hidden');
-            viewEmail.classList.remove('active');
-            
-            // Show Verify View
-            viewVerify.classList.remove('hidden');
-            viewVerify.classList.add('active');
-            
-            // Focus first OTP digit
-            setTimeout(() => {
-                const firstDigit = els.otpContainer.querySelector('.otp-digit');
-                if(firstDigit) firstDigit.focus();
-            }, 400);
-        } else {
-            // Show Email View
-            viewEmail.classList.remove('hidden');
-            viewEmail.classList.add('active');
-            
-            // Hide Verify View
-            viewVerify.classList.add('hidden');
-            viewVerify.classList.remove('active');
+        // Hide all others
+        views.forEach(v => {
+            if(v && v !== target) {
+                v.classList.add('hidden');
+                v.classList.remove('active');
+            }
+        });
+
+        // Show Target
+        if(target) {
+            target.classList.remove('hidden');
+            // Small delay to allow 'display:none' to clear before opacity fade
+            requestAnimationFrame(() => {
+                target.classList.add('active');
+            });
         }
     },
 
-    // 3. Error Shake
+    // 3. License Card Animation
+    showLicenseCard: (productName, email) => {
+        if(els.licenseProd) els.licenseProd.innerText = productName;
+        if(els.licenseEmail) els.licenseEmail.innerText = email;
+        
+        // Reset Icons
+        document.getElementById('icon-check').style.display = 'flex';
+        document.getElementById('icon-alert').style.display = 'none';
+        document.getElementById('license-msg-header').innerText = "Active License Found";
+        
+        UI.switchView('view-license');
+    },
+    
+    // 4. Show License Error
+    showLicenseError: () => {
+        UI.switchView('view-license');
+        document.getElementById('icon-check').style.display = 'none';
+        document.getElementById('icon-alert').style.display = 'flex';
+        document.getElementById('license-msg-header').innerText = "No License Found";
+        if(els.licenseProd) els.licenseProd.innerText = "No Active Subscription";
+        if(els.licenseEmail) els.licenseEmail.innerText = userEmail;
+        
+        // Hide "Verify" button, show "Purchase" or "Back" logic
+        els.btnSend.style.display = 'none';
+    },
+
+    // 5. Error Shake
     shakeError: () => {
         gsap.fromTo(".auth-container", 
             { x: -5 }, 
@@ -83,7 +114,7 @@ const UI = {
         );
     },
 
-    // 4. Unlock Transition (The Grand Reveal)
+    // 6. Unlock Transition (The Grand Reveal)
     unlockTransition: (onComplete) => {
         const tl = gsap.timeline({ onComplete });
         
@@ -92,22 +123,10 @@ const UI = {
           .set("#main-ui", { visibility: "visible" })
           .from("#sidebar", { x: -340, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
           .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
-          .from(".ui-element", { y: 20, opacity: 0, stagger: 0.1, duration: 0.6, ease: "back.out(1.7)" }, "-=0.8")
           .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
     },
 
-    // 5. Toggle Purchase Button
-    togglePurchaseBtn: (show) => {
-        if (!els.btnPurchase) return;
-        if(show) {
-            els.btnPurchase.style.display = "block";
-            gsap.fromTo(els.btnPurchase, { height: 0, opacity: 0 }, { height: "auto", opacity: 1, duration: 0.4 });
-        } else {
-            els.btnPurchase.style.display = "none";
-        }
-    },
-
-    // 6. Update Retry Counter
+    // 7. Update Retry Counter
     updateRetries: (remaining) => {
         if (!els.retryCounter) return;
         if(remaining === null || remaining === undefined) {
@@ -120,74 +139,36 @@ const UI = {
         }
     },
 
-    // 7. Toggle Export Menu
-    toggleExport: (show) => {
-        if(!els.exportPop) return;
-        gsap.to("#export-pop", { 
-            autoAlpha: show ? 1 : 0, 
-            scale: show ? 1 : 0.9, 
-            duration: 0.2, 
-            display: show ? "flex" : "none" 
-        });
-    },
-
-    // 8. Flash Save Success
-    flashSave: () => {
-        const btn = document.getElementById('btn-save');
-        if(!btn) return;
-        const originalText = btn.innerText;
-        btn.innerText = "SAVED!";
-        btn.style.color = "var(--accent)";
-        btn.style.borderColor = "var(--accent)";
-        setTimeout(() => {
-            btn.innerText = originalText;
-            btn.style.color = "";
-            btn.style.borderColor = "";
-        }, 2000);
-    },
-
-    // 9. Mobile Drag Logic
+    // 8. Mobile Drag Logic (Sidebar)
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const sidebar = document.getElementById('sidebar');
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const OPEN_Y = -(vh - 80); 
 
-        // Check if Draggable is loaded
         if (typeof Draggable !== 'undefined') {
             Draggable.create(sidebar, {
                 type: "y",
-                trigger: "#sheet-handle", // Only drag by handle
+                trigger: "#sheet-handle",
                 bounds: { minY: OPEN_Y, maxY: 0 },
                 inertia: true, 
                 edgeResistance: 0.8,
                 onDragEnd: function() {
                     const y = this.y;
-                    // Snap logic
                     gsap.to(this.target, { y: (y < OPEN_Y * 0.25) ? OPEN_Y : 0, duration: 0.5, ease: "power3.out" });
                 }
             });
         }
     },
 
-    // 10. Show Resume State
+    // 9. Show Resume State
     showResume: (email) => {
-        // Hide others
-        document.getElementById('view-email').classList.add('hidden');
-        document.getElementById('view-email').classList.remove('active');
-        document.getElementById('view-verify').classList.add('hidden');
-        
-        // Show Resume
-        const viewResume = document.getElementById('view-resume');
+        UI.switchView('view-resume');
         const emailEl = document.getElementById('resume-email');
         const bar = document.getElementById('resume-bar');
         
-        if(viewResume && emailEl && bar) {
-            viewResume.classList.remove('hidden');
-            viewResume.classList.add('active');
-            emailEl.innerText = email;
-            
-            // Animate Bar
+        if(emailEl) emailEl.innerText = email;
+        if(bar) {
             requestAnimationFrame(() => {
                 bar.style.width = "100%";
             });
@@ -195,15 +176,143 @@ const UI = {
     }
 };
 
-// --- HELPER: AUTH HEADERS (Hybrid Strategy) ---
+// --- HELPER: AUTH HEADERS ---
 function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
-    // If cookie fails, we send the token manually
+    // CRITICAL FIX: Always prefer the stored token over cookies
     if (msToken) headers['Authorization'] = `Bearer ${msToken}`;
     return headers;
 }
 
-// --- HELPER: OTP COLLECTION ---
+// --- APP INITIALIZATION ---
+async function initApp() {
+    UI.intro();
+    setupOtpInteractions();
+    bindEvents();
+
+    // 1. Health Check
+    try {
+        const health = await fetch(`${API_URL}/health`); 
+        const status = await health.json();
+        if(status.maintenance) return showStatus("Maintenance Mode", true);
+    } catch(e) {}
+
+    // 2. Auto-Login (Check Session)
+    if (msToken) {
+        try {
+            const res = await fetch(`${API_URL}/auth/validate`, {
+                method: 'POST',
+                headers: getAuthHeaders() // Uses msToken
+            });
+            const data = await res.json();
+            
+            if (data.valid) {
+                userEmail = data.email || "User";
+                UI.showResume(userEmail);
+                setTimeout(unlockApp, 1500); 
+                return;
+            } else {
+                // Token invalid, clear it
+                localStorage.removeItem("ms_token");
+                msToken = null;
+            }
+        } catch (e) {
+            console.log("Session check failed.");
+        }
+    }
+    
+    // Default: Show Email Input
+    UI.switchView('view-email');
+}
+
+// --- STEP 1: CHECK LICENSE ---
+async function checkLicense() {
+    const email = els.emailInput.value.trim();
+    
+    // Validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) { 
+        UI.shakeError(); 
+        return showStatus("Invalid email format", true); 
+    }
+    
+    userEmail = email;
+    setLoading(els.btnCheck, true);
+    showStatus("");
+    
+    // Hide Purchase Link initially
+    if(els.btnPurchase) els.btnPurchase.style.display = "none";
+
+    try {
+        const res = await fetch(`${API_URL}/auth/check`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") {
+                // Handle No License UI
+                if(els.btnPurchase) els.btnPurchase.style.display = "block";
+                UI.showLicenseError();
+                throw new Error("No active license found.");
+            }
+            throw new Error(data.message || "Connection failed");
+        }
+        
+        // Success: Show License Card
+        UI.showLicenseCard(data.product, email);
+        if(els.authSubtitle) els.authSubtitle.innerText = "Identity Confirmation";
+        
+    } catch (e) {
+        showStatus(e.message, true);
+        UI.shakeError();
+    } finally {
+        setLoading(els.btnCheck, false);
+    }
+}
+
+// --- STEP 2: SEND OTP ---
+async function requestOtp(isResend = false) {
+    const btn = isResend ? els.btnResend : els.btnSend;
+    setLoading(btn, true);
+    showStatus("");
+
+    try {
+        const res = await fetch(`${API_URL}/auth/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || "Failed to send code");
+        
+        // Success
+        if(!isResend) {
+            UI.switchView('view-verify');
+            if(els.otpTarget) els.otpTarget.innerText = userEmail;
+             // Focus first OTP digit
+             setTimeout(() => {
+                const firstDigit = els.otpContainer.querySelector('.otp-digit');
+                if(firstDigit) firstDigit.focus();
+            }, 400);
+        }
+        
+        if(els.authSubtitle) els.authSubtitle.innerText = "Verification";
+        startResendTimer();
+        UI.updateRetries(null);
+        
+    } catch (e) {
+        showStatus(e.message, true);
+        UI.shakeError();
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+// --- STEP 3: VERIFY OTP ---
 function getOtpCode() {
     const inputs = els.otpContainer.querySelectorAll('.otp-digit');
     let code = '';
@@ -217,106 +326,8 @@ function clearOtpInputs() {
     inputs[0].focus();
 }
 
-// --- APP INITIALIZATION ---
-async function initApp() {
-    // 1. Start Intro Animation (Loads the container)
-    UI.intro();
-    setupOtpInteractions();
-
-    // 2. Health Check (Optional but good)
-    try {
-        const health = await fetch(`${API_URL}/health`); 
-        const status = await health.json();
-        if(status.maintenance) {
-            // Logic for maintenance...
-            return;
-        }
-    } catch(e) {}
-
-    // 3. Auto-Login (Check Session)
-    try {
-        const res = await fetch(`${API_URL}/auth/validate`, {
-            method: 'POST',
-            credentials: 'include' 
-        });
-        const data = await res.json();
-        
-        if (data.valid) {
-            // SESSION FOUND! 
-            userEmail = data.email || "User";
-            
-            // A. Show the new Resume Card
-            UI.showResume(userEmail);
-            
-            // B. Wait for animation (1.5s), then Unlock
-            setTimeout(() => {
-                unlockApp();
-            }, 1500); 
-            
-        } else {
-            // No session, stay on Email Input (Default)
-            console.log("No active session.");
-        }
-    } catch (e) {
-        console.log("Network error checking session.");
-    }
-    
-    bindEvents();
-}
-
-// --- SECURE AUTHENTICATION ---
-async function requestOtp(isResend = false) {
-    const email = els.emailInput.value.trim();
-    
-    // Validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { 
-        UI.shakeError(); 
-        return showStatus("Invalid email format", true); 
-    }
-    
-    userEmail = email;
-    setLoading(isResend ? els.btnResend : els.btnOtp, true);
-    showStatus("");
-    UI.togglePurchaseBtn(false);
-
-    try {
-        // API Call
-        const res = await fetch(`${API_URL}/auth/init`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-
-        // Error Handling
-        if (!res.ok) {
-            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") {
-                UI.togglePurchaseBtn(true);
-                throw new Error("No active subscription found.");
-            }
-            if (res.status === 429) {
-                throw new Error(data.message || "Too many attempts. Try again later.");
-            }
-            throw new Error(data.message || "Connection failed");
-        }
-        
-        // Success
-        if(!isResend) UI.slideAuth(true);
-        if(els.authSubtitle) els.authSubtitle.innerText = `Code sent to ${email}`;
-        startResendTimer();
-        UI.updateRetries(null); // Clear errors
-        
-    } catch (e) {
-        showStatus(e.message, true);
-        UI.shakeError();
-    } finally {
-        setLoading(isResend ? els.btnResend : els.btnOtp, false);
-    }
-}
-
 async function verifyOtp() {
-    const code = getOtpCode().trim(); // UPDATED: Get code from 6 boxes
+    const code = getOtpCode().trim(); 
     if (code.length < 6) { UI.shakeError(); return showStatus("Enter full 6-digit code", true); }
 
     setLoading(els.btnVerify, true);
@@ -326,25 +337,21 @@ async function verifyOtp() {
         const res = await fetch(`${API_URL}/auth/verify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail, code }),
-            credentials: 'include' // Expect HttpOnly cookie
+            body: JSON.stringify({ email: userEmail, code })
         });
         const data = await res.json();
 
         if (!res.ok) {
-            // Handle 3-Strike Rule
             if (data.attemptsRemaining !== undefined) {
                 UI.updateRetries(data.attemptsRemaining);
-                if(data.attemptsRemaining === 0) {
-                    throw new Error("Account locked. Try again in 24h.");
-                }
             }
             throw new Error(data.message || "Verification failed");
         }
 
-        // Success - Store Token Fallback
+        // Success - Store Token in LocalStorage (FIX FOR SESSION RESUME)
         if (data.token) {
             msToken = data.token;
+            localStorage.setItem("ms_token", msToken);
         }
 
         unlockApp();
@@ -352,18 +359,17 @@ async function verifyOtp() {
     } catch (e) {
         showStatus(e.message, true);
         UI.shakeError();
-        clearOtpInputs(); // Clear boxes on error
+        clearOtpInputs();
     } finally {
         setLoading(els.btnVerify, false);
     }
 }
 
-// --- NEW: SPLIT INPUT LOGIC ---
+// --- OTP INPUT LOGIC ---
 function setupOtpInteractions() {
     const inputs = els.otpContainer.querySelectorAll('.otp-digit');
     
     inputs.forEach((input, index) => {
-        // 1. Handle typing
         input.addEventListener('input', (e) => {
             const val = e.target.value;
             if (val.length === 1 && index < inputs.length - 1) {
@@ -371,7 +377,6 @@ function setupOtpInteractions() {
             }
         });
 
-        // 2. Handle Backspace
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Backspace' && !e.target.value && index > 0) {
                 inputs[index - 1].focus();
@@ -379,16 +384,13 @@ function setupOtpInteractions() {
             if (e.key === 'Enter') verifyOtp();
         });
 
-        // 3. Handle Paste
         input.addEventListener('paste', (e) => {
             e.preventDefault();
             const pasteData = e.clipboardData.getData('text').slice(0, 6).split('');
             pasteData.forEach((char, i) => {
                 if (inputs[i]) inputs[i].value = char;
             });
-            // Focus last filled
             if (inputs[pasteData.length - 1]) inputs[pasteData.length - 1].focus();
-            // Auto submit if full
             if (pasteData.length === 6) verifyOtp();
         });
     });
@@ -410,7 +412,6 @@ function startResendTimer() {
             clearInterval(resendTimer);
             els.btnResend.style.display = "block"; 
             els.btnResend.innerText = "Resend Code";
-            if(els.authSubtitle) els.authSubtitle.innerText = "Did not receive code?";
         }
     }, 1000);
 }
@@ -424,16 +425,13 @@ function unlockApp() {
 }
 
 function loadProtectedCore() {
-    // This fetches the "Hidden" core.js from the worker
+    // This fetches the "Hidden" core.js using the stored token
     const headers = getAuthHeaders();
 
-    fetch(`${API_URL}/core.js`, { 
-        headers: headers,
-        credentials: 'include'
-    })
+    fetch(`${API_URL}/core.js`, { headers: headers })
     .then(res => {
         if (res.status === 401 || res.status === 403) throw new Error("Auth Failed");
-        if (res.status === 404) throw new Error("Core Engine Not Found (404)");
+        if (res.status === 404) throw new Error("Core Engine Not Found");
         if (!res.ok) throw new Error(`Error ${res.status}`);
         return res.text();
     })
@@ -442,91 +440,50 @@ function loadProtectedCore() {
         script.textContent = scriptContent;
         document.body.appendChild(script);
         console.log("System Unlocked.");
-        
-        // Load preferences only after core is ready
-        setTimeout(loadUserState, 500);
     })
     .catch(e => {
         console.error("Core Load Failed:", e);
         showStatus(`System Error: ${e.message}`, true);
-    });
-}
-
-// --- CLOUD STORAGE ---
-async function saveUserState() {
-    if (!window.MetaStar) return;
-    
-    const btn = document.getElementById('btn-save');
-    const prevText = btn.innerText;
-    btn.innerText = "...";
-    
-    try {
-        const state = window.MetaStar.getState(); 
-        await fetch(`${API_URL}/storage/save`, {
-            method: 'POST',
-            headers: getAuthHeaders(),
-            credentials: 'include',
-            body: JSON.stringify(state)
-        });
-        UI.flashSave();
-    } catch (e) {
-        btn.innerText = "ERROR";
-        setTimeout(() => btn.innerText = prevText, 2000);
-    }
-}
-
-async function loadUserState() {
-    try {
-        const res = await fetch(`${API_URL}/storage/load`, {
-            headers: getAuthHeaders(),
-            credentials: 'include'
-        });
-        const data = await res.json();
-        
-        if (data.config) {
-            const waitForCore = setInterval(() => {
-                if(window.MetaStar && window.MetaStar.importState) {
-                    window.MetaStar.importState(data.config);
-                    clearInterval(waitForCore);
-                }
-            }, 100);
+        // If auth failed, clear token to prevent loop
+        if(e.message === "Auth Failed") {
+            localStorage.removeItem("ms_token");
+            setTimeout(() => window.location.reload(), 2000);
         }
-    } catch (e) {}
+    });
 }
 
 // --- EVENT BINDING ---
 function bindEvents() {
-    if(els.btnOtp) els.btnOtp.onclick = () => requestOtp(false);
+    if(els.btnCheck) els.btnCheck.onclick = checkLicense;
+    if(els.btnSend) els.btnSend.onclick = () => requestOtp(false);
     if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
     if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
     if(els.btnPurchase) els.btnPurchase.onclick = () => window.open(PURCHASE_URL, '_blank');
 
-    const btnResetAuth = document.getElementById('btn-reset-auth');
-    if(btnResetAuth) {
-        btnResetAuth.onclick = () => {
-            UI.slideAuth(false);
-            resetAuthUI();
-        };
-    }
-    
-    if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') requestOtp(false) });
-    // Note: OTP Enter key is now handled in setupOtpInteractions
+    // Back Buttons
+    const goBack = () => {
+        UI.switchView('view-email');
+        if(els.authSubtitle) els.authSubtitle.innerText = "Professional Studio Access";
+        showStatus("");
+        if(els.btnSend) els.btnSend.style.display = "flex"; // Reset send button visibility
+    };
 
-    const saveBtn = document.getElementById('btn-save');
-    if(saveBtn) saveBtn.onclick = saveUserState;
+    if(els.btnBackEmail) els.btnBackEmail.onclick = goBack;
+    if(els.btnResetAuth) els.btnResetAuth.onclick = goBack;
+    
+    if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
 
     const resetSetBtn = document.getElementById('btn-reset-settings');
     if(resetSetBtn) resetSetBtn.onclick = () => window.MetaStar?.reset();
 
     // Export Logic
-    const exportBtn = document.getElementById('btn-export-trigger'); // Fixed ID from original HTML scan
-    const exportMenu = document.getElementById('export-menu'); // Fixed ID
+    const exportBtn = document.getElementById('btn-export-trigger');
+    const exportMenu = document.getElementById('export-menu');
     let isExportOpen = false;
     
     if(exportBtn && exportMenu) {
         document.addEventListener('click', (e) => {
             if (!exportBtn.contains(e.target) && !exportMenu.contains(e.target) && isExportOpen) {
-                // Manually hide since UI.toggleExport uses #export-pop which isn't in your HTML
                 exportMenu.style.display = 'none'; 
                 isExportOpen = false;
             }
@@ -553,14 +510,18 @@ function bindEvents() {
 function setLoading(btn, isLoading) {
     if(!btn) return;
     const spinner = btn.querySelector('.btn-loader');
+    const textSpan = btn.querySelector('span');
+    
     if(isLoading) { 
         btn.classList.add('loading'); 
         btn.disabled = true; 
         if(spinner) spinner.style.display = 'block';
+        if(textSpan) textSpan.style.opacity = '0';
     } else { 
         btn.classList.remove('loading'); 
         btn.disabled = false; 
         if(spinner) spinner.style.display = 'none';
+        if(textSpan) textSpan.style.opacity = '1';
     }
 }
 
@@ -568,19 +529,7 @@ function showStatus(msg, isError) {
     if(!els.statusMsg) return;
     els.statusMsg.innerText = msg;
     els.statusMsg.classList.add('visible');
-    els.statusMsg.classList.toggle('error', isError); // Use .error class for color
-}
-
-function resetAuthUI() {
-    if(els.authSubtitle) els.authSubtitle.innerText = "Professional Studio Access";
-    if(els.statusMsg) {
-        els.statusMsg.classList.remove('visible');
-        els.statusMsg.classList.remove('error');
-    }
-    UI.togglePurchaseBtn(false);
-    UI.updateRetries(null);
-    if(els.btnResend) els.btnResend.style.display = "none";
-    clearOtpInputs();
+    els.statusMsg.classList.toggle('error', isError); 
 }
 
 // Start
