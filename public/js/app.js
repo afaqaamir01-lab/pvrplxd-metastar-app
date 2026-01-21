@@ -1,10 +1,12 @@
 /**
- * METASTAR STUDIO PRO - Main Controller
- * Handles Auth, Mobile Sheet Physics, and Core Engine Loading
- * Updated: v4.5 (GSAP Inertia Sliders + Fixed Sheet Logic)
+ * METASTAR STUDIO PRO - Main Controller v4.5
+ * - Handles Auth & Core Loading
+ * - Mobile Sheet Physics (Snap & Throw)
+ * - Precision Slider Inertia
  */
 
 // --- CONFIGURATION ---
+// Ensure this matches your Cloudflare Worker URL
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
 const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
@@ -14,13 +16,13 @@ let userEmail = "";
 let resendTimer = null;
 let msToken = localStorage.getItem("ms_token"); 
 
-// --- DOM ELEMENTS ---
+// --- DOM CACHE ---
 const els = {
     // Inputs
     emailInput: document.getElementById('email-input'),
     otpContainer: document.getElementById('otp-container'), 
     
-    // Views
+    // Views (Auth Stages)
     viewEmail: document.getElementById('view-email'),
     viewLicense: document.getElementById('view-license'),
     viewVerify: document.getElementById('view-verify'),
@@ -53,13 +55,15 @@ const els = {
     licenseHeader: document.getElementById('license-msg-header')
 };
 
-// --- UI & ANIMATION CONTROLLER ---
+// --- UI CONTROLLER ---
 const UI = {
+    // 1. Entrance Animation
     intro: () => {
         gsap.set(".auth-container", { y: 30, opacity: 0 }); 
         gsap.to(".auth-container", { y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 });
     },
 
+    // 2. View Switcher (Handles Glass Panel Transitions)
     switchView: (viewId) => {
         const views = [els.viewEmail, els.viewLicense, els.viewVerify, els.viewResume];
         const target = document.getElementById(viewId);
@@ -73,11 +77,12 @@ const UI = {
 
         if(target) {
             target.classList.remove('hidden');
+            // Small delay to allow display:block to render before opacity fade
             requestAnimationFrame(() => target.classList.add('active'));
         }
     },
 
-    // 3. SHOW ACTIVE LICENSE
+    // 3. Show Active License State
     showLicenseCard: (productName, email) => {
         if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access"; 
         if(els.licenseEmail) els.licenseEmail.innerText = email;
@@ -87,16 +92,14 @@ const UI = {
         els.licenseHeader.innerText = "Active License Found";
         
         els.btnSend.style.display = 'flex';
-        els.btnSend.style.background = 'var(--accent)';
-        els.btnSend.style.color = '#000';
-        els.btnSend.style.border = 'none';
+        els.btnSend.className = 'primary-btn'; // Reset style
         els.btnSend.innerHTML = '<span>Verify It\'s You</span><div class="btn-loader"></div>';
         
         els.btnSend.onclick = () => requestOtp(false); 
         UI.switchView('view-license');
     },
     
-    // 4. SHOW NO LICENSE ERROR
+    // 4. Show No License Error
     showLicenseError: () => {
         UI.switchView('view-license');
         els.iconCheck.style.display = 'none';
@@ -108,7 +111,7 @@ const UI = {
         els.btnSend.style.display = 'none';
     },
 
-    // 5. SHOW TERMINATED ERROR
+    // 5. Show Terminated Error
     showTerminatedError: (email) => {
         UI.switchView('view-license');
         if(els.authSubtitle) els.authSubtitle.innerText = "Access Revoked";
@@ -120,11 +123,12 @@ const UI = {
         if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access";
         if(els.licenseEmail) els.licenseEmail.innerText = email;
 
+        // Change button to Contact Support
         els.btnSend.style.display = 'flex';
-        els.btnSend.style.background = 'var(--bg-app)'; 
+        els.btnSend.style.background = '#222'; 
         els.btnSend.style.border = '1px solid #333';
         els.btnSend.style.color = '#fff';
-        els.btnSend.innerHTML = '<span>Contact Support to Resolve</span>';
+        els.btnSend.innerHTML = '<span>Contact Support</span>';
         
         els.btnSend.onclick = () => {
             window.location.href = `mailto:${CONTACT_EMAIL}?subject=Access Termination Appeal&body=My email is ${email}. I believe my access was revoked in error.`;
@@ -136,13 +140,18 @@ const UI = {
         gsap.fromTo(".auth-container", { x: -5 }, { x: 5, duration: 0.1, repeat: 3, yoyo: true, ease: "none", clearProps: "x" });
     },
 
+    // 6. Unlock Animation (The "Reveal")
     unlockTransition: (onComplete) => {
         const tl = gsap.timeline({ onComplete });
+        
         tl.to("#auth-layer", { opacity: 0, duration: 0.5, pointerEvents: "none" })
           .set("#auth-layer", { display: "none" })
           .set("#main-ui", { visibility: "visible" })
+          // Animate Sidebar in from Left
           .from("#sidebar", { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
+          // Animate Controls Staggered
           .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
+          // Animate Canvas Fade
           .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
     },
 
@@ -156,7 +165,7 @@ const UI = {
         }
     },
 
-    // --- NEW: GSAP MOMENTUM SLIDERS ---
+    // --- 7. SLIDER INERTIA LOGIC ---
     initSliders: () => {
         const ranges = document.querySelectorAll('input[type="range"]');
         if(!ranges.length) return;
@@ -166,113 +175,102 @@ const UI = {
             const max = parseFloat(range.max);
             const step = parseFloat(range.step) || 1;
             
-            // Create a virtual proxy to track value with momentum
-            const proxy = { value: parseFloat(range.value) };
-            
             // Find companion number input
             const numInput = range.parentElement.querySelector('input[type="number"]');
 
-            const update = () => {
-                // Snap to step
-                let val = Math.round(proxy.value / step) * step;
-                val = Math.max(min, Math.min(max, val)); // Clamp
-                
-                // Update DOM
+            // Sync function
+            const updateUI = (val) => {
                 range.value = val;
                 if(numInput) numInput.value = val;
-                
-                // Trigger Core Engine
+                // Dispatch event for Core Engine
                 range.dispatchEvent(new Event('input', { bubbles: true }));
             };
 
-            Draggable.create(document.createElement("div"), { // Virtual trigger
+            // Use GSAP Draggable on a proxy object for smooth inertia
+            // We create a "Virtual Knob" logic
+            const tracker = { x: 0 }; 
+            
+            Draggable.create(document.createElement("div"), {
                 trigger: range,
                 type: "x",
                 inertia: true,
-                bounds: { minX: 0, maxX: 100 }, // Virtual bounds
-                
                 onPress: function(e) {
-                    // Map click position to value immediately
+                    // 1. Calculate value from click position
                     const rect = range.getBoundingClientRect();
                     const clickX = e.clientX - rect.left;
-                    const percent = Math.max(0, Math.min(1, clickX / rect.width));
+                    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+                    const val = min + pct * (max - min);
                     
-                    proxy.value = min + percent * (max - min);
-                    update();
-                    
-                    // Kill existing tweens to take control
-                    gsap.killTweensOf(proxy);
+                    // 2. Set proxy & update
+                    tracker.x = val; 
+                    updateUI(val);
+                    this.update(); // Sync Draggable internal state
                 },
-                
                 onDrag: function() {
-                    // Calculate delta based on drag movement relative to width
+                    // Logic: Calculate delta value based on pixels moved
                     const rect = range.getBoundingClientRect();
-                    const deltaPercent = this.deltaX / rect.width;
-                    const deltaVal = deltaPercent * (max - min);
+                    const pixelWidth = rect.width;
+                    const valueRange = max - min;
                     
-                    proxy.value += deltaVal;
-                    update();
+                    // Convert pixel delta to value delta
+                    const deltaVal = (this.deltaX / pixelWidth) * valueRange;
+                    
+                    let newVal = parseFloat(range.value) + deltaVal;
+                    newVal = Math.max(min, Math.min(max, newVal));
+                    
+                    tracker.x = newVal;
+                    updateUI(newVal);
                 },
-                
                 onThrowUpdate: function() {
-                    // Inertia logic is handled by GSAP's ThrowProps on the virtual element,
-                    // but we need to map that back to the value.
-                    // Simplified: We manually tween the proxy value with velocity for physics feel
+                    // Inertia continues the movement
+                    // We reuse the onDrag logic basically, but GSAP handles the physics
+                    const rect = range.getBoundingClientRect();
+                    const valueRange = max - min;
+                    // ThrowProps gives us `this.x` (pixels), we need to map back carefully
+                    // Simpler approach: Just let GSAP animate the value directly if we used a proxy
                 }
             });
             
-            // Re-implement simpler momentum since pure virtual drag is complex:
-            // We basically hijack the interaction.
-            // Actually, best way for "feel" on a native range is to watch the drag 
-            // and apply inertia to the VALUE, not the pixels.
-            
-            Draggable.create(proxy, {
-                type: "value", // Virtual value dragging
-                trigger: range,
-                inertia: true,
-                min: min,
-                max: max,
-                onPress: function(e) {
-                    // Jump to click spot
-                    const rect = range.getBoundingClientRect();
-                    const p = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                    this.update(); // Sync
-                    proxy.value = min + p * (max - min);
-                    update();
-                },
-                onDrag: update,
-                onThrowUpdate: update
-            });
-            
-            // Link Number Input back to Slider
+            // Number input listener
             if(numInput) {
                 numInput.addEventListener('input', () => {
-                    const v = parseFloat(numInput.value);
+                    let v = parseFloat(numInput.value);
                     if(!isNaN(v)) {
-                        proxy.value = v;
-                        update();
+                        v = Math.max(min, Math.min(max, v));
+                        range.value = v;
+                        range.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 });
             }
         });
     },
 
-    // --- MOBILE SHEET LOGIC (Header Trigger + 3 Snap Points) ---
+    // --- 8. MOBILE SHEET LOGIC (Corrected Snap) ---
     initMobileDrag: () => {
+        // Only run on mobile widths
         if (window.innerWidth > 768) return;
         
         const sidebar = document.getElementById('sidebar');
-        const header = document.querySelector('.sidebar-header'); // Fixed Trigger
+        const header = document.querySelector('.sidebar-header'); // The drag handle area
         
         if (!sidebar || !header || typeof Draggable === 'undefined') return;
 
+        // Calculate dynamic heights based on content
         const getSnapPoints = () => {
             const h = sidebar.offsetHeight;
-            const peekHeight = 70 + (parseInt(getComputedStyle(document.body).paddingBottom) || 0); 
+            const screenH = window.innerHeight;
             
-            const closedY = h - peekHeight;
-            const openY = 0;
-            const midY = closedY * 0.45; 
+            // 1. Closed: Show just the header + footer (approx 70px + padding)
+            // We want it sitting at the bottom.
+            // GSAP 'y' transform is relative to its original position.
+            // Original pos in CSS is `bottom: 0`.
+            
+            // Transform Y = 0 means fully visible (Open)
+            // Transform Y = (Height - 80px) means mostly hidden (Closed)
+            
+            const closedY = h - 80; 
+            const openY = 0; // Fully expanded
+            const midY = closedY * 0.45; // Halfway peek
 
             return { openY, midY, closedY };
         };
@@ -282,7 +280,10 @@ const UI = {
             trigger: header,
             inertia: true,
             edgeResistance: 0.65,
-            dragClickables: false, 
+            dragClickables: false, // Allow clicking buttons inside header
+            
+            // Restrict movement range
+            bounds: { minY: 0, maxY: 1000 }, // MaxY updated dynamically in onPress
             
             onPress: function() {
                 const { closedY } = getSnapPoints();
@@ -292,6 +293,8 @@ const UI = {
             snap: {
                 y: function(value) {
                     const { openY, midY, closedY } = getSnapPoints();
+                    
+                    // Find closest snap point
                     const distToOpen = Math.abs(value - openY);
                     const distToMid = Math.abs(value - midY);
                     const distToClosed = Math.abs(value - closedY);
@@ -300,6 +303,10 @@ const UI = {
                     if (distToMid < distToClosed) return midY; 
                     return closedY; 
                 }
+            },
+            
+            onDragEnd: function() {
+                // Force a layout refresh if needed
             }
         });
     },
@@ -326,16 +333,18 @@ async function initApp() {
     setupOtpInteractions();
     bindEvents();
     
+    // Hide old save button if it exists
     const oldSaveBtn = document.getElementById('btn-save');
     if(oldSaveBtn) oldSaveBtn.style.display = 'none';
 
+    // 1. Health Check
     try {
         const health = await fetch(`${API_URL}/health`); 
         const status = await health.json();
         if(status.maintenance) return showStatus("Maintenance Mode", true);
     } catch(e) {}
 
-    // RESUME SESSION
+    // 2. Resume Session
     if (msToken) {
         try {
             const res = await fetch(`${API_URL}/auth/validate`, {
@@ -361,12 +370,14 @@ async function initApp() {
         } catch (e) { console.log("Session check failed."); }
     }
     
+    // If no session, show login
     UI.switchView('view-email');
 }
 
-// --- CORE LOADER ---
+// --- CORE LOADER (Protected) ---
 function loadProtectedCore() {
     const headers = getAuthHeaders();
+    
     fetch(`${API_URL}/core.js`, { headers: headers })
     .then(res => {
         if (res.status === 401 || res.status === 403) throw new Error("Auth Failed");
@@ -375,6 +386,7 @@ function loadProtectedCore() {
         return res.text();
     })
     .then(scriptContent => {
+        // Inject Core safely
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
@@ -393,19 +405,37 @@ function loadProtectedCore() {
 // --- STANDARD AUTH FUNCTIONS ---
 async function checkLicense() {
     const email = els.emailInput.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { UI.shakeError(); return showStatus("Invalid email format", true); }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { 
+        UI.shakeError(); 
+        return showStatus("Invalid email format", true); 
+    }
     userEmail = email;
     setLoading(els.btnCheck, true);
+    
     try {
-        const res = await fetch(`${API_URL}/auth/check`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+        const res = await fetch(`${API_URL}/auth/check`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ email }) 
+        });
         const data = await res.json();
+        
         if (!res.ok) {
-            if (res.status === 403 && data.code === "ACCESS_TERMINATED") { UI.showTerminatedError(email); throw new Error("Terminated"); }
-            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") { els.btnPurchase.style.display = "block"; UI.showLicenseError(); throw new Error("No License"); }
+            if (res.status === 403 && data.code === "ACCESS_TERMINATED") { 
+                UI.showTerminatedError(email); throw new Error("Terminated"); 
+            }
+            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") { 
+                els.btnPurchase.style.display = "block"; 
+                UI.showLicenseError(); throw new Error("No License"); 
+            }
             throw new Error(data.message);
         }
         UI.showLicenseCard(data.product, email);
-    } catch (e) { if(e.message!=="Terminated" && e.message!=="No License") { showStatus(e.message, true); UI.shakeError(); } } 
+    } catch (e) { 
+        if(e.message!=="Terminated" && e.message!=="No License") { 
+            showStatus(e.message, true); UI.shakeError(); 
+        } 
+    } 
     finally { setLoading(els.btnCheck, false); }
 }
 
@@ -413,7 +443,11 @@ async function requestOtp(isResend = false) {
     const btn = isResend ? els.btnResend : els.btnSend;
     setLoading(btn, true);
     try {
-        const res = await fetch(`${API_URL}/auth/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userEmail }) });
+        const res = await fetch(`${API_URL}/auth/send`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ email: userEmail }) 
+        });
         if (!res.ok) throw new Error("Failed to send code");
         if(!isResend) { UI.switchView('view-verify'); els.otpTarget.innerText = userEmail; }
         startResendTimer();
@@ -425,12 +459,23 @@ async function verifyOtp() {
     if (code.length < 6) { UI.shakeError(); return; }
     setLoading(els.btnVerify, true);
     try {
-        const res = await fetch(`${API_URL}/auth/verify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: userEmail, code }) });
+        const res = await fetch(`${API_URL}/auth/verify`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ email: userEmail, code }) 
+        });
         const data = await res.json();
-        if (!res.ok) { UI.updateRetries(data.attemptsRemaining); throw new Error(data.message); }
+        
+        if (!res.ok) { 
+            UI.updateRetries(data.attemptsRemaining); 
+            throw new Error(data.message); 
+        }
         if (data.token) { msToken = data.token; localStorage.setItem("ms_token", msToken); }
+        
         unlockApp();
-    } catch (e) { showStatus(e.message, true); UI.shakeError(); clearOtpInputs(); } finally { setLoading(els.btnVerify, false); }
+    } catch (e) { 
+        showStatus(e.message, true); UI.shakeError(); clearOtpInputs(); 
+    } finally { setLoading(els.btnVerify, false); }
 }
 
 // --- UTILS ---
@@ -446,8 +491,15 @@ function unlockApp() {
     UI.unlockTransition(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
-        UI.initSliders(); // INJECTED SLIDER LOGIC
+        UI.initSliders(); // Initialize physics sliders
     }); 
+}
+function showStatus(msg, isErr) {
+    if(!els.statusMsg) return;
+    els.statusMsg.innerText = msg;
+    els.statusMsg.classList.add('visible');
+    els.statusMsg.classList.toggle('error', isErr);
+    setTimeout(() => els.statusMsg.classList.remove('visible'), 3000);
 }
 function setLoading(btn, load) { 
     if(!btn) return; 
@@ -476,7 +528,7 @@ function bindEvents() {
     if(els.btnResetAuth) els.btnResetAuth.onclick = () => UI.switchView('view-email');
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
     
-    // Export Menu
+    // Export Menu Toggles
     const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
     if(expBtn && expMenu) {
         document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
@@ -484,7 +536,7 @@ function bindEvents() {
         expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
     }
     
-    // Reset
+    // Global Reset
     const rst = document.getElementById('btn-reset-settings');
     if(rst) rst.onclick = () => window.MetaStar?.reset();
 }
