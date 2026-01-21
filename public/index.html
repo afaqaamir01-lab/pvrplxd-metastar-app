@@ -14,7 +14,8 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js" defer></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/InertiaPlugin.min.js" defer></script>
+
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -46,7 +47,6 @@
             </div>
 
             <div id="view-license" class="auth-view hidden" style="text-align: center;">
-                
                 <div class="icon-stage">
                     <div id="icon-check" class="status-icon success">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -124,13 +124,17 @@
             <div id="status-msg" class="status-toast"></div>
         </div>
     </div>
+
     <div id="main-ui" style="visibility: hidden;">
         
         <main id="viewport">
             <canvas id="canvas"></canvas>
             
             <div class="zoom-badge" id="zoomBadge">
-                <span class="icon">🔍</span>
+                <svg class="zoom-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
                 <span id="zoom-val">100%</span>
             </div>
         </main>
@@ -143,7 +147,10 @@
                 <button class="menu-item" data-fmt="png">Save PNG</button>
                 <button class="menu-item" data-fmt="jpg">Save JPG</button>
                 <div class="menu-divider"></div>
-                <button class="menu-item highlight" data-fmt="svg">Export SVG</button>
+                <button class="menu-item highlight" data-fmt="svg" style="justify-content: flex-start; gap: 8px;">
+                    <svg class="menu-icon-svg" style="opacity: 1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                    Export SVG
+                </button>
             </div>
         </div>
 
