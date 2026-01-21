@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#050505">
-    <meta name="description" content="MetaStar Studio Pro - Vector Manipulation Engine">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="MetaStar Studio Pro - Web-based Vector Manipulation Engine">
     
-    <title>MetaStar Shape Builder</title>
+    <title>MetaStar Studio Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +14,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/InertiaPlugin.min.js" defer></script>
     
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -27,12 +24,15 @@
             
             <div class="auth-header">
                 <div class="logo-text">METASTAR</div>
-                <p id="auth-subtitle">Pro Website Access</p>
+                <p id="auth-subtitle">Active User Authentication</p>
             </div>
 
             <div id="view-email" class="auth-view active">
                 <div class="input-wrapper">
                     <input type="email" id="email-input" class="modern-input" placeholder="name@example.com" autocomplete="email" inputmode="email">
+                    <div class="input-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    </div>
                 </div>
                 
                 <button id="btn-check-license" class="primary-btn">
@@ -41,26 +41,28 @@
                 </button>
 
                 <button id="btn-purchase" class="text-link" style="display: none; margin-top: 15px; color: var(--accent);">
-                    No Access? Get License &rarr;
+                    No Access? Buy Here &rarr;
                 </button>
             </div>
 
             <div id="view-license" class="auth-view hidden" style="text-align: center;">
+                
                 <div class="icon-stage">
                     <div id="icon-check" class="status-icon success">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     </div>
                     <div id="icon-alert" class="status-icon error" style="display: none;">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line><circle cx="12" cy="12" r="10"></circle></svg>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     </div>
                 </div>
 
-                <div id="license-msg-header" class="msg-header" style="font-weight:700; margin-bottom: 20px;">Active License Found</div>
+                <div id="license-msg-header" class="msg-header">Active Purchase Found</div>
                 
                 <div class="license-card-detail">
                     <div class="detail-label">PRODUCT</div>
                     <div id="license-product-name" class="detail-value highlight">MetaStar Website Access</div>
-                    <div class="detail-label" style="margin-top: 12px;">ACCOUNT</div>
+                    
+                    <div class="detail-label" style="margin-top: 8px;">YOUR EMAIL</div>
                     <div id="license-email-display" class="detail-value muted">user@example.com</div>
                 </div>
 
@@ -76,7 +78,7 @@
 
             <div id="view-verify" class="auth-view hidden">
                 <div class="otp-instruction">
-                    Enter the code sent to <span id="otp-email-target" style="color: #fff;">your email</span>
+                    Enter the code sent to <span id="otp-email-target" style="color: #fff;">email</span>
                 </div>
                 
                 <div class="otp-group" id="otp-container">
@@ -93,57 +95,56 @@
                     <div class="btn-loader"></div>
                 </button>
                 
-                <div id="retry-counter" style="font-size: 10px; color: var(--danger); margin-top: 12px; height: 12px;"></div>
+                <div id="retry-counter" style="font-size: 10px; color: var(--danger); margin-top: 10px; height: 12px;"></div>
 
                 <div class="auth-footer">
                     <button id="btn-resend" class="text-link">Resend Code</button>
-                    <span class="divider" style="opacity:0.3">•</span>
+                    <span class="divider">•</span>
                     <button id="btn-reset-auth" class="text-link">Cancel</button>
                 </div>
             </div>
 
             <div id="view-resume" class="auth-view hidden" style="text-align: center;">
-                <div style="margin-bottom: 24px;">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5">
-                        <path d="M5.5 8.5L9 12l-3.5 3.5M15 12h-6"/>
-                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                <div style="margin-bottom: 16px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
                     </svg>
                 </div>
-                <div style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px;">Welcome Back</div>
-                <div id="resume-email" style="font-size: 13px; color: var(--text-muted); margin-bottom: 32px;"></div>
+                <div style="font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px;">Welcome Back</div>
+                <div id="resume-email" style="font-size: 13px; color: var(--text-muted); margin-bottom: 24px;"></div>
                 
                 <div style="width: 100%; height: 2px; background: #222; border-radius: 2px; overflow: hidden; position: relative;">
-                    <div id="resume-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); transition: width 1.2s ease-out;"></div>
+                    <div id="resume-bar" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: var(--accent); transition: width 1.5s ease-in-out;"></div>
                 </div>
                 
-                <div style="margin-top: 16px; font-size: 10px; color: #444; letter-spacing: 1px;">INITIALIZING CORE...</div>
+                <div style="margin-top: 12px; font-size: 10px; color: #444;">RESTORING SESSION...</div>
             </div>
 
             <div id="status-msg" class="status-toast"></div>
         </div>
     </div>
 
-    <div id="main-ui">
+    <div id="main-ui" style="visibility: hidden;">
         
         <main id="viewport">
             <canvas id="canvas"></canvas>
             
             <div class="zoom-badge" id="zoomBadge">
-                <span class="icon" style="font-size: 10px;">🔍</span>
+                <span class="icon">🔍</span>
                 <span id="zoom-val">100%</span>
             </div>
         </main>
 
         <div class="fab-container">
             <button class="fab" id="btn-export-trigger" title="Export">
-                <span>Export</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </button>
             <div class="export-menu" id="export-menu">
-                <button class="menu-item" data-fmt="png">Save as PNG</button>
-                <button class="menu-item" data-fmt="jpg">Save as JPG</button>
-                <div class="menu-divider" style="height:1px; background:#222; margin:4px 0;"></div>
-                <button class="menu-item highlight" data-fmt="svg">Export SVG Vector</button>
+                <button class="menu-item" data-fmt="png">Save PNG</button>
+                <button class="menu-item" data-fmt="jpg">Save JPG</button>
+                <div class="menu-divider"></div>
+                <button class="menu-item highlight" data-fmt="svg">Export SVG</button>
             </div>
         </div>
 
@@ -153,19 +154,13 @@
             <div class="sidebar-header">
                 <span class="brand">MetaStar</span>
                 <div class="header-tools">
-                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                    </button>
+                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">↺</button>
                 </div>
             </div>
             
             <div class="sidebar-content">
-                
                 <div class="control-section">
-                    <div class="section-head">
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                        <span class="section-label">Geometry</span>
-                    </div>
+                    <div class="section-label">Geometry</div>
                     <div class="control-row">
                         <label>Top</label>
                         <div class="slider-group"><input type="range" id="r-t" min="10" max="600"><input type="number" id="n-t"></div>
@@ -185,10 +180,7 @@
                 </div>
 
                 <div class="control-section">
-                    <div class="section-head">
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                        <span class="section-label">Transform</span>
-                    </div>
+                    <div class="section-label">Transform</div>
                     <div class="control-row">
                         <label>Skew X</label>
                         <div class="slider-group"><input type="range" id="r-sx" min="-100" max="100"><input type="number" id="n-sx"></div>
@@ -208,10 +200,7 @@
                 </div>
 
                 <div class="control-section">
-                    <div class="section-head">
-                        <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-                        <span class="section-label">Guides & Style</span>
-                    </div>
+                    <div class="section-label">Guides</div>
                     <div class="control-row">
                         <label>Grid</label>
                         <label class="toggle-switch">
@@ -236,23 +225,14 @@
                     </div>
                 </div>
                 
-                <div class="creative-card">
-                    <div class="creative-text">
-                        A little cool project built by a creative, <br>
-                        for creative people, <br>
-                        for creative purposes.
-                    </div>
-                    <div class="creative-heart">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                    </div>
+                <div class="sidebar-footer">
+                    MetaStar Engine v2.1
                 </div>
-
-                <div style="height: 40px;"></div>
             </div>
         </aside>
 
         <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">
-            Made by Pvrplxd
+            By Pvrplxd
         </a>
     </div>
 
