@@ -258,6 +258,11 @@ async function initApp() {
             if (data.valid) {
                 userEmail = data.email || "User";
                 
+                // FIX: Manually trigger the container entrance for returning users
+                // We use a slightly faster animation for the resume 'pop'
+                gsap.set(".auth-container", { scale: 0.95, opacity: 0 }); 
+                gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.1)" });
+                
                 // Show Resume State (Toast Mode)
                 UI.switchState('state-resume', 'RESTORING SESSION');
                 const emailEl = document.getElementById('resume-email');
