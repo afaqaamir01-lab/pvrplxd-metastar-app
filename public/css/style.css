@@ -10,22 +10,24 @@
     
     /* Acid Industrial Accent */
     --accent: #dfff00;
-    --accent-hover: #eaff33; /* Brighter for hover */
+    --accent-hover: #eaff33;
     --accent-dim: rgba(223, 255, 0, 0.05);
     
+    /* Semantic Colors */
     --text-main: #ffffff;
     --text-muted: #888888;
     --danger: #ff4444;
+    --warning: #ffcc00;
     --success: #00ff88;
 
     /* Dimensions */
     --sidebar-width: 280px;
     --sidebar-margin: 24px;
     
-    /* MODERNISED ROUNDED LOOK */
-    --radius-sm: 8px;   /* Buttons, Inputs */
-    --radius-md: 12px;  /* Cards, Badges */
-    --radius-lg: 24px;  /* Panels */
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
     
     /* Animation */
     --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -45,193 +47,224 @@ body {
     background-image: radial-gradient(circle at 50% 30%, #111 0%, #000 100%);
 }
 
-/* --- 2. SMOOTH CORE LOADER --- */
-#core-loader {
-    position: fixed; inset: 0;
-    background: #000; z-index: 10000;
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity 0.8s ease-in-out, visibility 0.8s;
-}
-#core-loader.loaded { opacity: 0; visibility: hidden; pointer-events: none; }
-
-.loader-spinner {
-    width: 40px; height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+/* --- 2. AUTH TERMINAL OVERLAY --- */
+.overlay { 
+    position: fixed; inset: 0; 
+    z-index: 9999; 
+    background: #000; 
+    display: flex; align-items: center; justify-content: center; 
+    padding: 20px; 
 }
 
-/* --- 3. AUTH LAYOUT (MODERNIZED) --- */
-.overlay { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-
-/* The Glass Card */
-.glass-panel { 
+/* THE TERMINAL CONTAINER */
+.auth-container { 
+    width: 100%; 
+    max-width: 360px; /* Tight & Focused */
     background: var(--glass-panel); 
     border: 1px solid var(--glass-border); 
     border-radius: var(--radius-lg); 
-    box-shadow: 0 40px 100px rgba(0,0,0,0.8); 
-}
-
-/* Container: Compact & Fluid */
-.auth-container { 
-    width: 100%; 
-    max-width: 380px; /* Slightly narrower for modern look */
-    padding: 32px 28px; /* REDUCED PADDING (Was 48px) */
-    text-align: center; 
+    box-shadow: 0 40px 100px rgba(0,0,0,0.9);
+    
+    /* Layout Logic */
+    display: flex; 
+    flex-direction: column;
+    padding: 32px 28px;
     position: relative; 
     overflow: hidden;
-    /* Smooth Height Transition Setup */
-    transition: height 0.4s var(--ease-out);
+    
+    /* Smooth Resize Animation */
+    height: auto;
+    transition: height 0.3s var(--ease-out);
 }
 
-/* Header */
-.auth-header { margin-bottom: 32px; }
-.logo-text { font-size: 24px; font-weight: 700; letter-spacing: 2px; color: #fff; margin-bottom: 4px; }
-#auth-subtitle { color: var(--text-muted); font-size: 13px; margin: 0; font-weight: 400; }
+/* Header Section */
+.auth-header { 
+    text-align: center; 
+    margin-bottom: 24px; 
+    flex-shrink: 0;
+}
+.logo-text { 
+    font-size: 20px; 
+    font-weight: 700; 
+    letter-spacing: 3px; 
+    color: #fff; 
+    margin-bottom: 6px; 
+}
+.terminal-status { 
+    color: var(--text-muted); 
+    font-size: 10px; 
+    font-family: monospace; 
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
 
-/* View Management */
-.auth-view { width: 100%; }
-.auth-view.hidden { display: none; }
-/* Note: Opacity/Transform handled by GSAP now */
+/* --- 3. STATE MANAGEMENT --- */
+/* By default, states are hidden. Active state is flex-column */
+.auth-state {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    animation: fadeIn 0.3s ease-out;
+}
+.auth-state.active {
+    display: flex;
+}
+.auth-state.hidden {
+    display: none !important;
+}
 
-/* --- TACTILE INPUTS --- */
-.input-wrapper { position: relative; margin-bottom: 24px; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 4. INPUTS & BUTTONS --- */
+.input-wrapper { position: relative; margin-bottom: 16px; width: 100%; }
 
 .modern-input { 
     width: 100%; 
     background: #0f0f0f; 
     border: 1px solid #2a2a2a; 
-    padding: 16px 16px 16px 48px; /* Compact padding */
+    padding: 14px 14px 14px 44px; 
     border-radius: var(--radius-md); 
-    color: #fff; font-size: 15px; font-family: inherit; 
+    color: #fff; font-size: 14px; font-family: inherit; 
     transition: all 0.2s ease; 
 }
 .modern-input:focus { 
-    border-color: #555; /* Tactile Grey Border */
+    border-color: #555; 
     background: #000; 
-    /* No Glow - Just Sharpness */
 }
 .modern-input::placeholder { color: #444; }
 
-.input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #444; pointer-events: none; transition: color 0.2s; }
+.input-icon { 
+    position: absolute; left: 16px; top: 50%; 
+    transform: translateY(-50%); 
+    color: #444; 
+    pointer-events: none; 
+    transition: color 0.2s; 
+}
 .modern-input:focus + .input-icon { color: #fff; }
 
-/* --- BUTTONS (NO GLOW) --- */
 .primary-btn { 
-    width: 100%; padding: 16px; 
+    width: 100%; padding: 14px; 
     background: var(--accent); color: #000; 
     border: none; border-radius: var(--radius-md); 
-    font-weight: 600; font-size: 15px; 
+    font-weight: 700; font-size: 13px; 
+    letter-spacing: 0.5px; text-transform: uppercase;
     cursor: pointer; 
-    /* Solid Transition */
     transition: transform 0.1s ease, background-color 0.2s ease;
     display: flex; justify-content: center; align-items: center; 
     position: relative; overflow: hidden;
+    margin-top: 8px;
 }
-.primary-btn:hover { 
-    background-color: var(--accent-hover); /* Just brighter */
-    transform: translateY(-1px); /* Micro lift */
-}
+.primary-btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
 .primary-btn:active { transform: scale(0.98); }
 
-/* Purchase Button (Specific High-Vis Style) */
-.primary-btn.purchase-btn {
-    background: var(--accent);
-    color: #000;
-    margin-top: 12px;
+/* Special Button Variants */
+.btn-purchase {
+    background: #fff; color: #000; /* High Contrast */
 }
+.btn-purchase:hover { background: #eee; }
 
-.btn-loader { display: none; width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; position: absolute; }
+.btn-loader { 
+    display: none; 
+    width: 16px; height: 16px; 
+    border: 2px solid rgba(0,0,0,0.1); 
+    border-top-color: #000; 
+    border-radius: 50%; 
+    animation: spin 0.8s linear infinite; 
+    position: absolute; 
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* --- LICENSE CARD DETAILS --- */
-.license-card-detail { 
-    background: rgba(255,255,255,0.02); 
-    border: 1px solid #222; 
-    border-radius: var(--radius-md); 
-    padding: 20px; margin-bottom: 24px; 
-    text-align: left; 
-}
-
-.detail-row { display: flex; flex-direction: column; gap: 2px; }
-.detail-label { font-size: 10px; color: #555; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
-.detail-value { font-size: 14px; color: #ddd; }
-.detail-value.highlight { color: var(--accent); font-weight: 600; }
-.detail-value.muted { color: #888; font-size: 13px; }
-
-/* --- OTP SECTION --- */
-.otp-instruction { color: #666; font-size: 13px; margin-bottom: 24px; }
-.highlight-text { color: #fff; font-weight: 500; }
-
-.otp-group { display: flex; gap: 8px; justify-content: center; margin-bottom: 24px; }
-.otp-digit { 
-    width: 44px; height: 56px; 
-    background: #111; border: 1px solid #2a2a2a; 
-    border-radius: var(--radius-sm); 
-    color: #fff; font-size: 22px; font-weight: 500; text-align: center; 
-    transition: border-color 0.2s, background 0.2s; caret-color: var(--accent);
-}
-.otp-digit:focus { border-color: var(--accent); background: #000; }
-
-.retry-counter { font-size: 11px; color: var(--danger); margin-top: 12px; min-height: 14px; }
-
-/* --- FOOTER & LINKS (Refined) --- */
-.auth-footer-slot {
-    margin-top: 24px; /* Consistent spacing from main button */
-    display: flex; justify-content: center;
-}
-
-.auth-footer-links { display: flex; align-items: center; gap: 12px; }
-
+/* Text Links */
 .text-link { 
     background: none; border: none; padding: 0;
-    color: var(--text-muted); font-size: 12px; 
+    color: var(--text-muted); font-size: 11px; 
     cursor: pointer; transition: color 0.2s; 
     text-decoration: underline; text-decoration-color: transparent;
 }
 .text-link:hover { color: #fff; text-decoration-color: #555; }
-.divider { color: #333; font-size: 10px; }
 
-/* Toast */
+.footer-row {
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    margin-top: 16px;
+}
+.sep { font-size: 10px; color: #333; }
+
+/* --- 5. STATE VISUALS (ICONS & MESSAGES) --- */
+.icon-stage { 
+    width: 56px; height: 56px; 
+    border-radius: 50%; 
+    margin: 0 auto 16px auto;
+    display: flex; align-items: center; justify-content: center; 
+    background: #111; border: 1px solid #222;
+}
+.icon-stage.success { color: var(--success); border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+.icon-stage.warning { color: var(--warning); border-color: rgba(255,204,0,0.3); background: rgba(255,204,0,0.05); }
+.icon-stage.danger { color: var(--danger); border-color: rgba(255,68,68,0.3); background: rgba(255,68,68,0.05); }
+
+.msg-header { 
+    font-size: 14px; font-weight: 700; color: #fff; 
+    text-align: center; margin-bottom: 4px; letter-spacing: 0.5px;
+}
+.msg-header.warning { color: var(--warning); }
+.msg-header.danger { color: var(--danger); }
+
+.msg-sub {
+    font-size: 12px; color: #888; text-align: center; margin-bottom: 20px; line-height: 1.4;
+}
+
+.license-badge {
+    background: #111; border: 1px solid #222;
+    padding: 12px; border-radius: var(--radius-md);
+    font-size: 12px; color: #ddd; text-align: center;
+    margin-bottom: 20px;
+}
+.license-badge span { color: #555; font-size: 10px; font-weight: 700; margin-right: 4px; }
+
+/* --- 6. LOADING & OTP --- */
+.scan-loader {
+    width: 100%; height: 2px; background: #222; 
+    border-radius: 2px; overflow: hidden; position: relative;
+    margin-bottom: 12px;
+}
+.scan-bar {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 30%;
+    background: var(--accent);
+    animation: scanMove 1s infinite ease-in-out;
+}
+@keyframes scanMove {
+    0% { left: -30%; } 100% { left: 100%; }
+}
+.scan-text {
+    text-align: center; font-size: 10px; color: #666; letter-spacing: 1px;
+}
+
+.otp-group { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
+.otp-digit { 
+    width: 40px; height: 50px; 
+    background: #111; border: 1px solid #2a2a2a; 
+    border-radius: var(--radius-sm); 
+    color: #fff; font-size: 20px; font-weight: 500; text-align: center; 
+    transition: border-color 0.2s, background 0.2s; caret-color: var(--accent);
+}
+.otp-digit:focus { border-color: var(--accent); background: #000; }
+
+.retry-counter { font-size: 10px; color: var(--danger); text-align: center; height: 14px; margin-top: 8px; }
+
+/* Status Toast */
 .status-toast { 
-    margin-top: 16px; min-height: 20px; 
-    font-size: 12px; font-weight: 500; 
+    margin-top: 12px; text-align: center;
+    font-size: 11px; font-weight: 500; 
     opacity: 0; transition: opacity 0.3s; color: #888; 
 }
 .status-toast.visible { opacity: 1; }
 .status-toast.error { color: var(--danger); }
 
-/* --- STATUS ICONS --- */
-.icon-stage { display: flex; justify-content: center; margin-bottom: 20px; }
-.status-icon { 
-    width: 64px; height: 64px; border-radius: 50%; 
-    display: flex; align-items: center; justify-content: center; 
-    background: #111; border: 1px solid #222;
-}
-.status-icon.success { color: var(--success); border-color: rgba(0,255,136,0.2); }
-.status-icon.error { color: var(--danger); border-color: rgba(255,68,68,0.2); }
-.msg-header { color: #fff; margin-bottom: 16px; font-weight: 600; font-size: 15px; }
-
-/* --- RESUME SCREEN --- */
-.resume-icon-wrapper { margin-bottom: 16px; opacity: 0.8; }
-.resume-title { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 4px; }
-.resume-email { font-size: 13px; color: #666; margin-bottom: 24px; }
-
-.loader-track { 
-    width: 100%; height: 2px; 
-    background: #222; border-radius: 2px; 
-    overflow: hidden; position: relative; 
-}
-.loader-fill { 
-    position: absolute; left: 0; top: 0; bottom: 0; 
-    width: 0%; background: var(--accent); 
-    transition: width 1.5s ease-in-out; 
-}
-.resume-status { margin-top: 12px; font-size: 10px; color: #444; letter-spacing: 1px; }
-
-
-/* --- 4. MAIN UI & SIDEBAR (Kept largely the same, just variable tweaks) --- */
+/* --- 7. CORE UI STYLES (SIDEBAR & FAB) --- */
+/* (Kept exactly as requested - Main UI Unchanged) */
 #main-ui { position: relative; width: 100%; height: 100%; }
 #viewport { position: absolute; inset: 0; background: var(--bg-app); cursor: default; touch-action: none; overflow: hidden; }
 canvas { display: block; width: 100%; height: 100%; }
@@ -260,7 +293,6 @@ canvas { display: block; width: 100%; height: 100%; }
 .control-row label { font-size: 13px; color: #ccc; font-weight: 500; }
 .slider-group { display: flex; align-items: center; gap: 12px; flex: 1; margin-left: 12px; }
 
-/* Inputs in Sidebar */
 input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 4px; cursor: pointer; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); cursor: grab; transition: transform 0.1s; margin-top: -6px; }
 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
@@ -271,7 +303,6 @@ input[type=color]:hover { transform: scale(1.1); border-color: #555; }
 input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padding: 0; }
 
-/* Toggles */
 .toggle-wrapper { position: relative; width: 44px; height: 24px; }
 .ios-toggle { opacity: 0; width: 0; height: 0; position: absolute; }
 .toggle-btn { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2a2a2a; transition: .3s; border-radius: 999px; border: 1px solid #333; }
@@ -279,11 +310,9 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
 .ios-toggle:checked + .toggle-btn { background-color: rgba(223, 255, 0, 0.15); border-color: var(--accent); }
 .ios-toggle:checked + .toggle-btn:before { transform: translateX(20px); background-color: var(--accent); }
 
-/* Footer */
 .sidebar-footer { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #666; line-height: 1.5; margin-top: 8px; }
 .version-pill { align-self: flex-start; display: inline-flex; padding: 4px 8px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 10px; font-weight: 700; }
 
-/* Floating */
 .fab-container { position: absolute; top: 24px; right: 24px; z-index: 50; }
 .fab { width: 48px; height: 48px; background: var(--glass-panel); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 .fab:hover { transform: scale(1.05); background: rgba(255,255,255,0.1); }
@@ -296,13 +325,12 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
 .credit-badge { position: absolute; bottom: 32px; right: 32px; color: var(--text-muted); font-size: 11px; font-weight: 500; text-decoration: none; padding: 8px 12px; border-radius: 50px; transition: color 0.2s; }
 .credit-badge:hover { color: #fff; }
 
-/* --- RESPONSIVE --- */
+/* Mobile Adjustments */
 #sheet-handle { display: none; } 
 @media (max-width: 480px) {
-    .auth-container { padding: 24px 20px; max-width: 90%; } /* Even tighter on mobile */
-    .auth-header { margin-bottom: 24px; }
-    .logo-text { font-size: 22px; }
-    .otp-digit { width: 40px; height: 50px; font-size: 20px; }
+    .auth-container { max-width: 90%; padding: 24px 20px; }
+    .logo-text { font-size: 18px; }
+    .otp-digit { width: 36px; height: 46px; font-size: 18px; }
 }
 
 @media (max-width: 768px) {
@@ -315,3 +343,8 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
     .fab-container { top: 20px; right: 20px; }
     .credit-badge { display: none; } 
 }
+
+/* Core Loader (Black Curtain) */
+#core-loader { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s ease-in-out, visibility 0.8s; }
+#core-loader.loaded { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-spinner { width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite; }
