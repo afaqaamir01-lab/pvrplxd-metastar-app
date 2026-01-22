@@ -21,7 +21,7 @@
     --sidebar-width: 280px;
     --sidebar-margin: 24px;
     
-    /* MODERNISED ROUNDED LOOK (No more sharp squircles) */
+    /* MODERNISED ROUNDED LOOK */
     --radius-sm: 8px;   /* Buttons, Inputs */
     --radius-md: 14px;  /* Cards, Badges */
     --radius-lg: 28px;  /* Panels, Sidebar */
@@ -283,21 +283,30 @@ input[type=number] {
 input[type=number]:focus { border-color: var(--accent); background: #000; }
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-/* Color Pickers */
+/* Color Pickers (FIXED) */
 input[type=color] {
     -webkit-appearance: none; appearance: none;
     border: 2px solid #333; 
     width: 32px; height: 32px;
-    border-radius: 50%; /* Circle Color Picker */
+    border-radius: 50%; 
     overflow: hidden; padding: 0; 
     cursor: pointer; 
     background: none;
     transition: transform 0.2s;
 }
 input[type=color]:hover { transform: scale(1.1); border-color: #555; }
-input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; }
 
-/* --- NEW iOS STYLE TOGGLES --- */
+/* FIX FOR INNER CIRCLE SHAPE */
+input[type=color]::-webkit-color-swatch-wrapper {
+    padding: 0; 
+}
+input[type=color]::-webkit-color-swatch {
+    border: none; 
+    border-radius: 50%;
+    padding: 0;
+}
+
+/* --- iOS STYLE TOGGLES --- */
 .toggle-wrapper {
     position: relative;
     width: 44px;
