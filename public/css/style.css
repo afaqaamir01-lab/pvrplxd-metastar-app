@@ -345,25 +345,50 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
 .version-pill { align-self: flex-start; display: inline-flex; padding: 4px 8px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 10px; font-weight: 700; }
 
 /* --- 8. FLOATING ACTIONS (TOP RIGHT) & BADGES --- */
+
+/* The Container for Zoom + Export */
 .fab-container { 
     position: absolute; top: 24px; right: 24px; 
     z-index: 50; 
-    display: flex; align-items: center; /* Keeps zoom & btn aligned */
+    display: flex; align-items: center; 
+    gap: 12px; /* Consistent gap between Pill and Circle */
 }
 
-/* Zoom Badge (Desktop: Left of Export Button) */
-.zoom-badge { 
-    margin-right: 12px; /* Spacing between badge and button */
-    background: rgba(0,0,0,0.6); 
-    backdrop-filter: blur(10px); 
-    border: 1px solid rgba(255,255,255,0.08); 
-    padding: 10px 16px; 
-    border-radius: 50px; 
-    font-size: 12px; font-weight: 500; 
-    display: flex; gap: 8px; align-items: center; 
-    color: #fff; 
-    pointer-events: none; /* Let clicks pass through if needed, though visually distinct */
+/* NEW: Zoom Control Pill */
+.zoom-control-pill {
+    height: 48px; /* EXACT MATCH to .fab height */
+    background: var(--glass-panel); 
+    backdrop-filter: blur(20px); 
+    border: 1px solid var(--glass-border); 
+    border-radius: 99px; /* Pill Shape */
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px; /* Internal padding for buttons */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    min-width: 120px; /* Ensure space for numbers */
 }
+/* The Value Text */
+#zoom-val {
+    font-size: 13px; font-weight: 600; 
+    color: #fff; font-variant-numeric: tabular-nums;
+    text-align: center; width: 44px;
+}
+
+/* The + / - Buttons */
+.zoom-btn {
+    width: 40px; height: 40px; /* Fits nicely inside 48px container */
+    border-radius: 50%;
+    border: none; background: transparent;
+    color: #aaa;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+}
+.zoom-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    transform: scale(1.1);
+}
+.zoom-btn:active { transform: scale(0.9); }
+
 .zoom-icon-svg { width: 14px; height: 14px; color: var(--accent); }
 
 .fab { 
@@ -423,11 +448,9 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
     :root { --sidebar-width: 100%; --sidebar-margin: 0; }
     
     /* Mobile Zoom Badge: Top Left */
-    .zoom-badge {
+   .zoom-control-pill {
         position: fixed;
         top: 24px; left: 24px;
-        right: auto; bottom: auto;
-        margin: 0;
         z-index: 95;
     }
     /* Hide credit badge on mobile to prevent overlap with bottom sheet */
