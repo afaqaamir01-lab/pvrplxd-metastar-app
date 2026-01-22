@@ -25,72 +25,91 @@
             
             <div class="auth-header">
                 <div class="logo-text">METASTAR</div>
-                <p id="auth-subtitle">Active User Authentication</p>
+                <div id="terminal-status" class="terminal-status">SYSTEM READY</div>
             </div>
 
-            <div id="view-email" class="auth-view active">
+            <div id="state-identity" class="auth-state active">
                 <div class="input-wrapper">
-                    <input type="email" id="email-input" class="modern-input" placeholder="name@example.com" autocomplete="email" inputmode="email">
+                    <input type="email" id="email-input" class="modern-input" placeholder="Enter Access ID (Email)" autocomplete="email" inputmode="email">
                     <div class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                     </div>
                 </div>
                 
-                <button id="btn-check-license" class="primary-btn">
-                    <span>Continue</span>
+                <button id="btn-init" class="primary-btn">
+                    <span>INITIALIZE SYSTEM</span>
                     <div class="btn-loader"></div>
                 </button>
             </div>
 
-            <div id="view-license" class="auth-view hidden" style="text-align: center;">
-                <div class="icon-stage">
-                    <div id="icon-check" class="status-icon success">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                    </div>
-                    <div id="icon-alert" class="status-icon error" style="display: none;">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    </div>
+            <div id="state-scanning" class="auth-state hidden">
+                <div class="scan-loader">
+                    <div class="scan-bar"></div>
                 </div>
+                <div class="scan-text">VERIFYING CREDENTIALS...</div>
+            </div>
 
-                <div id="license-msg-header" class="msg-header">Active Purchase Found</div>
+            <div id="state-success" class="auth-state hidden">
+                <div class="icon-stage success">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
+                <div class="msg-header">LICENSE VERIFIED</div>
                 
-                <div class="license-card-detail">
-                    <div class="detail-row">
-                        <div class="detail-label">PRODUCT</div>
-                        <div id="license-product-name" class="detail-value highlight">MetaStar Website Access</div>
-                    </div>
-                    
-                    <div class="detail-row" style="margin-top: 12px;">
-                        <div class="detail-label">LINKED EMAIL</div>
-                        <div id="license-email-display" class="detail-value muted">user@example.com</div>
-                    </div>
+                <div class="license-badge">
+                    <span>PRODUCT:</span> MetaStar Engine Access
                 </div>
 
-                <div class="action-area">
-                    <button id="btn-send-otp" class="primary-btn">
-                        <span>Verify It's You</span>
-                        <div class="btn-loader"></div>
-                    </button>
-
-                    <button id="btn-buy-license" class="primary-btn purchase-btn" style="display: none;">
-                        <span>Secure Access Now &rarr;</span>
-                    </button>
-                </div>
+                <button id="btn-send-otp" class="primary-btn">
+                    <span>VERIFY IDENTITY</span>
+                    <div class="btn-loader"></div>
+                </button>
                 
-                <div class="auth-footer-slot">
-                    <button id="btn-back-email" class="text-link">
-                        Use different email
-                    </button>
+                <div class="footer-row">
+                    <button class="text-link action-back">Different ID</button>
                 </div>
             </div>
 
-            <div id="view-verify" class="auth-view hidden">
-                <div class="otp-instruction">
-                    Enter code sent to <span id="otp-email-target" class="highlight-text">email</span>
+            <div id="state-purchase" class="auth-state hidden">
+                <div class="icon-stage warning">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                 </div>
+                <div class="msg-header warning">NO SUBSCRIPTION FOUND</div>
+                <div class="msg-sub">Access to MetaStar requires an active license.</div>
+
+                <button id="btn-buy-access" class="primary-btn btn-purchase">
+                    <span>PURCHASE LICENSE &rarr;</span>
+                </button>
+                
+                <div class="footer-row">
+                    <button class="text-link" id="btn-refresh-license">Check Again</button>
+                    <span class="sep">/</span>
+                    <button class="text-link action-back">Different ID</button>
+                </div>
+            </div>
+
+            <div id="state-terminated" class="auth-state hidden">
+                <div class="icon-stage danger">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <div class="msg-header danger">ACCESS TERMINATED</div>
+                <div class="msg-sub">Your license has been revoked by admin.</div>
+
+                <button id="btn-renew" class="primary-btn btn-purchase">
+                    <span>RENEW ACCESS &rarr;</span>
+                </button>
+                
+                <div class="footer-row">
+                    <button class="text-link" id="btn-contact-support">Contact Support</button>
+                    <span class="sep">/</span>
+                    <button class="text-link action-back">Different ID</button>
+                </div>
+            </div>
+
+            <div id="state-otp" class="auth-state hidden">
+                <div class="msg-sub">ENTER SECURITY CODE</div>
                 
                 <div class="otp-group" id="otp-container">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
@@ -99,36 +118,30 @@
                 </div>
                 
                 <button id="btn-verify" class="primary-btn">
-                    <span>Unlock Engine</span>
+                    <span>UNLOCK ENGINE</span>
                     <div class="btn-loader"></div>
                 </button>
                 
                 <div id="retry-counter" class="retry-counter"></div>
 
-                <div class="auth-footer-slot">
-                    <div class="auth-footer-links">
-                        <button id="btn-resend" class="text-link">Resend Code</button>
-                        <span class="divider">•</span>
-                        <button id="btn-reset-auth" class="text-link">Cancel</button>
-                    </div>
+                <div class="footer-row">
+                    <button id="btn-resend" class="text-link">Resend Code</button>
+                    <span class="sep">/</span>
+                    <button class="text-link action-back">Cancel</button>
                 </div>
             </div>
 
-            <div id="view-resume" class="auth-view hidden" style="text-align: center;">
-                <div class="resume-icon-wrapper">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
+            <div id="state-resume" class="auth-state hidden" style="align-items: center;">
+                <div class="icon-stage">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </div>
-                <div class="resume-title">Welcome Back</div>
-                <div id="resume-email" class="resume-email"></div>
+                <div class="msg-header">WELCOME BACK</div>
+                <div id="resume-email" class="msg-sub"></div>
                 
-                <div class="loader-track">
-                    <div id="resume-bar" class="loader-fill"></div>
+                <div class="scan-loader">
+                    <div id="resume-bar" class="scan-bar" style="width:0%; animation:none; transition: width 1.2s ease-in-out;"></div>
                 </div>
-                
-                <div class="resume-status">RESTORING SESSION...</div>
+                <div class="scan-text">RESTORING SESSION...</div>
             </div>
 
             <div id="status-msg" class="status-toast"></div>
