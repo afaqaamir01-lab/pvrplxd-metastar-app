@@ -1,8 +1,9 @@
 /**
  * METASTAR STUDIO PRO - Main Controller v5.0
- * - Kinetic Auth Transitions (Height + Slide)
- * - Intelligent Error Handling (Purchase Paths)
- * - Seamless Core Injection
+ * - Terminal State Logic
+ * - Kinetic UI Transitions
+ * - exact Mobile Sheet Physics (Open/Mid/Closed)
+ * - Core Engine Injection
  */
 
 // --- CONFIGURATION ---
@@ -17,189 +18,117 @@ let msToken = localStorage.getItem("ms_token");
 
 // --- DOM CACHE ---
 const els = {
+    // Container
+    authLayer: document.getElementById('auth-layer'),
+    authContainer: document.querySelector('.auth-container'),
+    terminalStatus: document.getElementById('terminal-status'),
+
+    // States
+    stateIdentity: document.getElementById('state-identity'),
+    stateScanning: document.getElementById('state-scanning'),
+    stateSuccess: document.getElementById('state-success'),
+    statePurchase: document.getElementById('state-purchase'),
+    stateTerminated: document.getElementById('state-terminated'),
+    stateOtp: document.getElementById('state-otp'),
+    stateResume: document.getElementById('state-resume'),
+
     // Inputs
     emailInput: document.getElementById('email-input'),
-    otpContainer: document.getElementById('otp-container'), 
-    
-    // Views (Auth Stages)
-    viewEmail: document.getElementById('view-email'),
-    viewLicense: document.getElementById('view-license'),
-    viewVerify: document.getElementById('view-verify'),
-    viewResume: document.getElementById('view-resume'),
-    authContainer: document.querySelector('.auth-container'),
+    otpContainer: document.getElementById('otp-container'),
 
     // Buttons
-    btnCheck: document.getElementById('btn-check-license'), 
-    btnSend: document.getElementById('btn-send-otp'),     
-    btnVerify: document.getElementById('btn-verify'),     
+    btnInit: document.getElementById('btn-init'),
+    btnSend: document.getElementById('btn-send-otp'),
+    btnVerify: document.getElementById('btn-verify'),
+    btnBuy: document.getElementById('btn-buy-access'),
+    btnRenew: document.getElementById('btn-renew'),
     btnResend: document.getElementById('btn-resend'),
-    btnBackEmail: document.getElementById('btn-back-email'),
-    btnResetAuth: document.getElementById('btn-reset-auth'),
-    btnBuy: document.getElementById('btn-buy-license'), // New Buy Button
-    
-    // UI Elements
-    authLayer: document.getElementById('auth-layer'),
+    btnRefresh: document.getElementById('btn-refresh-license'),
+    btnContact: document.getElementById('btn-contact-support'),
+
+    // Feedback
+    statusMsg: document.getElementById('status-msg'),
+    retryCounter: document.getElementById('retry-counter'),
+
+    // Core UI
     coreLoader: document.getElementById('core-loader'),
     mainUI: document.getElementById('main-ui'),
     sidebar: document.getElementById('sidebar'),
-    zoomVal: document.getElementById('zoomBadge'),
-    
-    // Status & Text
-    statusMsg: document.getElementById('status-msg'),
-    authSubtitle: document.getElementById('auth-subtitle'),
-    
-    // License Card Details
-    licenseProd: document.getElementById('license-product-name'),
-    licenseEmail: document.getElementById('license-email-display'),
-    licenseHeader: document.getElementById('license-msg-header'),
-    iconCheck: document.getElementById('icon-check'),
-    iconAlert: document.getElementById('icon-alert'),
-    
-    // Verify Details
-    otpTarget: document.getElementById('otp-email-target'),
-    retryCounter: document.getElementById('retry-counter')
+    zoomVal: document.getElementById('zoomBadge')
 };
 
 // --- UI CONTROLLER ---
 const UI = {
-    // 1. Kinetic View Switcher (Slide + Height Resize)
-    switchView: (targetId, direction = 'forward') => {
-        const currentView = document.querySelector('.auth-view.active');
-        const targetView = document.getElementById(targetId);
-        
-        if (!targetView || currentView === targetView) return;
-
-        // A. Measure Target Height (Invisible Render)
-        targetView.style.display = 'block';
-        targetView.style.visibility = 'hidden';
-        targetView.style.position = 'absolute'; 
-        const targetHeight = targetView.offsetHeight;
-        targetView.style.position = '';
-        targetView.style.visibility = '';
-        targetView.style.display = 'none';
-
-        // B. Animate Container Height
-        // Add padding (32*2) + Header Height (~70) + Footer/Toast (~40)
-        // Roughly: targetHeight + 140px. 
-        // Better approach: Let CSS auto-height handle it, but animate specific max-height if needed.
-        // For simplicity with GSAP, we often animate the container explicitly if we want perfect smoothing.
-        // Here we rely on the CSS 'transition: height' we added. We just need to trigger the DOM flow change.
-        
-        // C. Slide Animation
-        const outX = direction === 'forward' ? -20 : 20;
-        const inX = direction === 'forward' ? 20 : -20;
-
-        const tl = gsap.timeline();
-
-        if (currentView) {
-            tl.to(currentView, {
-                opacity: 0,
-                x: outX,
-                duration: 0.2,
-                ease: "power2.in",
-                onComplete: () => {
-                    currentView.classList.remove('active');
-                    currentView.classList.add('hidden');
-                    
-                    // Swap DOM
-                    targetView.classList.remove('hidden');
-                    
-                    // Trigger Height Transition (Browser handles this via CSS)
-                    
-                    gsap.fromTo(targetView, 
-                        { opacity: 0, x: inX },
-                        { opacity: 1, x: 0, duration: 0.3, ease: "power2.out", 
-                          onComplete: () => targetView.classList.add('active') 
-                        }
-                    );
-                }
-            });
-        } else {
-            // First Load
-            targetView.classList.remove('hidden');
-            targetView.classList.add('active');
-        }
-    },
-
-    // 2. Entrance
+    // 1. Entrance
     intro: () => {
         if(!msToken) {
-            if(els.coreLoader) els.coreLoader.classList.add('loaded'); // Lift curtain
+            if(els.coreLoader) els.coreLoader.classList.add('loaded'); // Lift black curtain
         }
-        gsap.set(".auth-container", { y: 30, opacity: 0 }); 
-        gsap.to(".auth-container", { y: 0, opacity: 1, duration: 0.8, ease: "back.out(1.2)", delay: 0.2 });
+        // Terminal Pop-in
+        gsap.set(".auth-container", { scale: 0.9, opacity: 0 }); 
+        gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.2)", delay: 0.2 });
     },
 
-    // 3. License State: SUCCESS
-    showLicenseCard: (productName, email) => {
-        // Text
-        els.licenseHeader.innerText = "Active Purchase Found";
-        els.licenseProd.innerText = "MetaStar Website Access"; 
-        els.licenseEmail.innerText = email;
+    // 2. Terminal State Switcher (Kinetic)
+    switchState: (stateId, statusText = "PROCESSING...") => {
+        const allStates = document.querySelectorAll('.auth-state');
+        const target = document.getElementById(stateId);
         
-        // Styling
-        els.iconCheck.style.display = 'flex';
-        els.iconAlert.style.display = 'none';
-        els.licenseProd.classList.remove('error-text');
-        els.licenseProd.classList.add('highlight');
+        // Update Status Text
+        if(els.terminalStatus) els.terminalStatus.innerText = statusText;
 
-        // Buttons
-        els.btnSend.style.display = 'flex'; // Show Verify Button
-        els.btnBuy.style.display = 'none';  // Hide Buy Button
-        
-        UI.switchView('view-license', 'forward');
-    },
-    
-    // 4. License State: NO SUBSCRIPTION (Offer Purchase)
-    showLicenseError: () => {
-        // Text
-        els.licenseHeader.innerText = "No Active License Found";
-        els.licenseProd.innerText = "MetaStar Website Access (Required)"; 
-        els.licenseEmail.innerText = userEmail;
-        
-        // Styling
-        els.iconCheck.style.display = 'none';
-        els.iconAlert.style.display = 'flex';
-        els.licenseProd.classList.remove('highlight');
-        
-        // Buttons
-        els.btnSend.style.display = 'none'; // Hide Verify
-        els.btnBuy.style.display = 'flex';  // Show Buy
-        els.btnBuy.querySelector('span').innerText = "Secure Access Now \u2192";
-        els.btnBuy.onclick = () => window.open(PURCHASE_URL, '_blank');
+        // Hide all others
+        allStates.forEach(el => {
+            if(el !== target) {
+                el.classList.remove('active');
+                el.classList.add('hidden');
+            }
+        });
 
-        UI.switchView('view-license', 'forward');
+        // Show Target
+        if(target) {
+            target.classList.remove('hidden');
+            target.classList.add('active');
+            
+            // Kinetic Height Animation
+            gsap.to(els.authContainer, { 
+                height: "auto", 
+                duration: 0.4, 
+                ease: "power2.out" 
+            });
+            
+            // Fade In Content
+            gsap.fromTo(target, 
+                { opacity: 0, y: 10 }, 
+                { opacity: 1, y: 0, duration: 0.3, clearProps: "all" }
+            );
+        }
     },
 
-    // 5. License State: TERMINATED (Offer Renew + Support)
-    showTerminatedError: (email) => {
-        // Text
-        els.licenseHeader.innerText = "Access Terminated";
-        els.licenseProd.innerText = "License Revoked by Admin";
-        els.licenseEmail.innerText = email;
-
-        // Styling
-        els.iconCheck.style.display = 'none';
-        els.iconAlert.style.display = 'flex';
-        
-        // Buttons
-        els.btnSend.style.display = 'none'; // Hide Verify
-        els.btnBuy.style.display = 'flex';  // Show Buy (Renew)
-        els.btnBuy.querySelector('span').innerText = "Renew / Buy Access \u2192";
-        els.btnBuy.onclick = () => window.open(PURCHASE_URL, '_blank');
-        
-        // Add "Contact Support" as a secondary link in footer if not already there
-        // Or inject a secondary button dynamically
-        showStatus("Access has been revoked.", true);
-        
-        UI.switchView('view-license', 'forward');
-    },
-
+    // 3. Error Feedback
     shakeError: () => {
         gsap.fromTo(".auth-container", { x: -6 }, { x: 6, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
     },
 
-    // 6. Transition to App
+    showStatus: (msg, isErr) => {
+        if(!els.statusMsg) return;
+        els.statusMsg.innerText = msg;
+        els.statusMsg.classList.add('visible');
+        els.statusMsg.classList.toggle('error', isErr);
+        setTimeout(() => els.statusMsg.classList.remove('visible'), 3500);
+    },
+
+    updateRetries: (remaining) => {
+        if (!els.retryCounter) return;
+        if(remaining === null || remaining === undefined) {
+            els.retryCounter.innerText = "";
+        } else {
+            els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
+            gsap.fromTo(els.retryCounter, { color: "#fff" }, { color: "#ff4444", duration: 0.5 });
+        }
+    },
+
+    // 4. TRANSITION TO APP
     prepareForCore: (onComplete) => {
         if(els.coreLoader) els.coreLoader.classList.remove('loaded'); // Drop curtain
         
@@ -220,17 +149,7 @@ const UI = {
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
-    updateRetries: (remaining) => {
-        if (!els.retryCounter) return;
-        if(remaining === null || remaining === undefined) {
-            els.retryCounter.innerText = "";
-        } else {
-            els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
-            gsap.fromTo(els.retryCounter, { color: "#fff" }, { color: "#ff4444", duration: 0.5 });
-        }
-    },
-
-    // --- UTILS: Sliders & Drag (Preserved) ---
+    // --- CORE PHYSICS (SLIDERS & DRAG) ---
     initSliders: () => {
         const ranges = document.querySelectorAll('input[type="range"]');
         if(!ranges.length) return;
@@ -258,24 +177,42 @@ const UI = {
     },
 
     initMobileDrag: () => {
-        if (window.innerWidth > 768 || !els.sidebar) return;
+        if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
-        const h = els.sidebar.offsetHeight, closedY = h - 80;
-        
-        Draggable.create(els.sidebar, {
-            type: "y", trigger: header, inertia: true, edgeResistance: 0.65,
-            bounds: { minY: 0, maxY: h },
-            onPress: function() { this.applyBounds({ minY: 0, maxY: closedY }); },
-            snap: { y: (v) => (v < closedY * 0.4) ? 0 : closedY }
-        });
-    },
+        if (!els.sidebar || !header || typeof Draggable === 'undefined') return;
 
-    showResume: (email) => {
-        UI.switchView('view-resume');
-        const emailEl = document.getElementById('resume-email');
-        if(emailEl) emailEl.innerText = email;
-        const bar = document.getElementById('resume-bar');
-        if(bar) requestAnimationFrame(() => bar.style.width = "100%");
+        const getSnapPoints = () => {
+            const h = els.sidebar.offsetHeight;
+            const closedY = h - 80; 
+            const openY = 0; 
+            const midY = closedY * 0.45; 
+            return { openY, midY, closedY };
+        };
+
+        Draggable.create(els.sidebar, {
+            type: "y",
+            trigger: header,
+            inertia: true,
+            edgeResistance: 0.65,
+            dragClickables: false, 
+            bounds: { minY: 0, maxY: 1000 }, 
+            onPress: function() {
+                const { closedY } = getSnapPoints();
+                this.applyBounds({ minY: 0, maxY: closedY });
+            },
+            snap: {
+                y: function(value) {
+                    const { openY, midY, closedY } = getSnapPoints();
+                    const distToOpen = Math.abs(value - openY);
+                    const distToMid = Math.abs(value - midY);
+                    const distToClosed = Math.abs(value - closedY);
+
+                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
+                    if (distToMid < distToClosed) return midY; 
+                    return closedY; 
+                }
+            }
+        });
     }
 };
 
@@ -286,12 +223,19 @@ function getAuthHeaders() {
     return headers;
 }
 
-// --- INIT FLOW ---
+function setLoading(btn, load) { 
+    if(!btn) return; 
+    btn.classList.toggle('loading', load); btn.disabled = load;
+    const l = btn.querySelector('.btn-loader'), t = btn.querySelector('span');
+    if(l) l.style.display = load?'block':'none'; if(t) t.style.opacity = load?'0':'1';
+}
+
+// --- APP INIT FLOW ---
 async function initApp() {
     setupOtpInteractions();
     bindEvents();
     
-    // Check for existing session
+    // Resume Check
     if (msToken) {
         try {
             const res = await fetch(`${API_URL}/auth/validate`, { method: 'POST', headers: getAuthHeaders() });
@@ -299,15 +243,22 @@ async function initApp() {
             
             if (data.valid) {
                 userEmail = data.email || "User";
-                UI.showResume(userEmail);
-                setTimeout(unlockApp, 1200); // Allow loader bar to fill
+                
+                // Show Resume State
+                UI.switchState('state-resume', 'RESTORING SESSION');
+                const emailEl = document.getElementById('resume-email');
+                if(emailEl) emailEl.innerText = userEmail;
+                const bar = document.getElementById('resume-bar');
+                if(bar) requestAnimationFrame(() => bar.style.width = "100%");
+                
+                setTimeout(unlockApp, 1200);
                 return;
             } else {
                 localStorage.removeItem("ms_token");
                 msToken = null;
                 if (data.code === "ACCESS_TERMINATED") {
                     UI.intro();
-                    UI.showTerminatedError(data.email);
+                    UI.switchState('state-terminated', 'ACCESS REVOKED');
                     return;
                 }
             }
@@ -315,10 +266,10 @@ async function initApp() {
     }
     
     UI.intro(); 
-    UI.switchView('view-email');
+    UI.switchState('state-identity', 'SYSTEM READY');
 }
 
-// --- CORE LOADER ---
+// --- CORE LOADING ---
 function loadProtectedCore() {
     fetch(`${API_URL}/core.js`, { headers: getAuthHeaders() })
     .then(res => {
@@ -329,10 +280,10 @@ function loadProtectedCore() {
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
-        setTimeout(() => UI.revealInterface(), 400); // Sync with script exec
+        setTimeout(() => UI.revealInterface(), 400); 
     })
     .catch(e => {
-        showStatus("Session Expired. Refreshing...", true);
+        UI.showStatus("Session Expired. Reloading...", true);
         localStorage.removeItem("ms_token");
         setTimeout(() => window.location.reload(), 2000);
     });
@@ -341,10 +292,13 @@ function loadProtectedCore() {
 // --- AUTH LOGIC ---
 async function checkLicense() {
     const email = els.emailInput.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { UI.shakeError(); return showStatus("Invalid email", true); }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { UI.shakeError(); return UI.showStatus("Invalid email", true); }
     
     userEmail = email;
-    setLoading(els.btnCheck, true);
+    setLoading(els.btnInit, true);
+    
+    // Switch to Scan
+    UI.switchState('state-scanning', 'CONTACTING SERVER...');
     
     try {
         const res = await fetch(`${API_URL}/auth/check`, { 
@@ -355,21 +309,25 @@ async function checkLicense() {
         const data = await res.json();
         
         if (!res.ok) {
-            // SPECIFIC ERROR HANDLING (Redirection to Buy)
             if (res.status === 403 && data.code === "ACCESS_TERMINATED") { 
-                UI.showTerminatedError(email); return; 
+                UI.switchState('state-terminated', 'ACCESS DENIED');
+                return; 
             }
             if (res.status === 403 && data.code === "NO_SUBSCRIPTION") { 
-                UI.showLicenseError(); return; 
+                UI.switchState('state-purchase', 'LICENSE REQUIRED');
+                return; 
             }
             throw new Error(data.message || "Unknown Error");
         }
-        UI.showLicenseCard(data.product, email);
+        
+        // Success
+        UI.switchState('state-success', 'VERIFIED');
     } catch (e) { 
-        showStatus(e.message, true); 
+        UI.showStatus(e.message, true); 
+        UI.switchState('state-identity', 'SYSTEM READY'); // Go back
         UI.shakeError(); 
     } 
-    finally { setLoading(els.btnCheck, false); }
+    finally { setLoading(els.btnInit, false); }
 }
 
 async function requestOtp(isResend = false) {
@@ -382,12 +340,12 @@ async function requestOtp(isResend = false) {
             body: JSON.stringify({ email: userEmail }) 
         });
         if (!res.ok) throw new Error("Could not send code");
+        
         if(!isResend) { 
-            UI.switchView('view-verify', 'forward'); 
-            els.otpTarget.innerText = userEmail; 
+            UI.switchState('state-otp', 'AWAITING CODE');
         }
         startResendTimer();
-    } catch (e) { showStatus(e.message, true); UI.shakeError(); } 
+    } catch (e) { UI.showStatus(e.message, true); UI.shakeError(); } 
     finally { setLoading(btn, false); }
 }
 
@@ -414,7 +372,7 @@ async function verifyOtp() {
         unlockApp();
         
     } catch (e) { 
-        showStatus(e.message, true); 
+        UI.showStatus(e.message, true); 
         UI.shakeError(); 
         clearOtpInputs(); 
     } finally { setLoading(els.btnVerify, false); }
@@ -423,12 +381,14 @@ async function verifyOtp() {
 // --- UTILITIES ---
 function getOtpCode() { return Array.from(els.otpContainer.querySelectorAll('input')).map(i=>i.value).join(''); }
 function clearOtpInputs() { els.otpContainer.querySelectorAll('input').forEach(i=>i.value=''); els.otpContainer.querySelector('input').focus(); }
+
 function startResendTimer() {
     if(!els.btnResend) return;
     let t = 60; els.btnResend.style.display = "none";
     if(resendTimer) clearInterval(resendTimer);
     resendTimer = setInterval(() => { t--; if(t<=0) { clearInterval(resendTimer); els.btnResend.style.display = "block"; els.btnResend.innerText="Resend Code"; } }, 1000);
 }
+
 function unlockApp() { 
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
@@ -436,19 +396,7 @@ function unlockApp() {
         UI.initSliders(); 
     }); 
 }
-function showStatus(msg, isErr) {
-    if(!els.statusMsg) return;
-    els.statusMsg.innerText = msg;
-    els.statusMsg.classList.add('visible');
-    els.statusMsg.classList.toggle('error', isErr);
-    setTimeout(() => els.statusMsg.classList.remove('visible'), 3500);
-}
-function setLoading(btn, load) { 
-    if(!btn) return; 
-    btn.classList.toggle('loading', load); btn.disabled = load;
-    const l = btn.querySelector('.btn-loader'), t = btn.querySelector('span');
-    if(l) l.style.display = load?'block':'none'; if(t) t.style.opacity = load?'0':'1';
-}
+
 function setupOtpInteractions() {
     const inputs = els.otpContainer.querySelectorAll('input');
     inputs.forEach((input, i) => {
@@ -461,13 +409,25 @@ function setupOtpInteractions() {
         });
     });
 }
+
 function bindEvents() {
-    if(els.btnCheck) els.btnCheck.onclick = checkLicense;
+    // Buttons
+    if(els.btnInit) els.btnInit.onclick = checkLicense;
     if(els.btnSend) els.btnSend.onclick = () => requestOtp(false);
     if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
     if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
-    if(els.btnBackEmail) els.btnBackEmail.onclick = () => UI.switchView('view-email', 'back');
-    if(els.btnResetAuth) els.btnResetAuth.onclick = () => UI.switchView('view-email', 'back');
+    
+    // Purchase / Support Actions
+    if(els.btnBuy) els.btnBuy.onclick = () => window.open(PURCHASE_URL, '_blank');
+    if(els.btnRenew) els.btnRenew.onclick = () => window.open(PURCHASE_URL, '_blank');
+    if(els.btnRefresh) els.btnRefresh.onclick = checkLicense;
+    if(els.btnContact) els.btnContact.onclick = () => window.location.href = `mailto:${CONTACT_EMAIL}`;
+    
+    // Back Actions (Reset to Identity)
+    document.querySelectorAll('.action-back').forEach(btn => {
+        btn.onclick = () => UI.switchState('state-identity', 'SYSTEM READY');
+    });
+
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
 
     // Menu Interactions
