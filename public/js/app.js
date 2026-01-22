@@ -8,7 +8,7 @@
 
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastarpro"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
 
 // --- STATE ---
