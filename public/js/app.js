@@ -1,12 +1,11 @@
 /**
  * METASTAR STUDIO PRO - Main Controller v4.5
- * - Handles Auth & Core Loading
+ * - Handles Auth & Core Loading (Transitions)
  * - Mobile Sheet Physics (Snap & Throw)
  * - Precision Slider Inertia
  */
 
 // --- CONFIGURATION ---
-// Ensure this matches your Cloudflare Worker URL
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
 const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
@@ -37,6 +36,13 @@ const els = {
     btnResetAuth: document.getElementById('btn-reset-auth'),
     btnPurchase: document.getElementById('btn-purchase'),
     
+    // UI Elements
+    authLayer: document.getElementById('auth-layer'),
+    coreLoader: document.getElementById('core-loader'),
+    mainUI: document.getElementById('main-ui'),
+    sidebar: document.getElementById('sidebar'),
+    zoomVal: document.getElementById('zoomBadge'),
+    
     // Status & Text
     statusMsg: document.getElementById('status-msg'),
     authSubtitle: document.getElementById('auth-subtitle'),
@@ -45,10 +51,6 @@ const els = {
     otpTarget: document.getElementById('otp-email-target'),
     retryCounter: document.getElementById('retry-counter'),
     
-    // UI Extras
-    sidebar: document.getElementById('sidebar'),
-    zoomVal: document.getElementById('zoomBadge'),
-
     // Icons
     iconCheck: document.getElementById('icon-check'),
     iconAlert: document.getElementById('icon-alert'),
@@ -57,13 +59,18 @@ const els = {
 
 // --- UI CONTROLLER ---
 const UI = {
-    // 1. Entrance Animation
+    // 1. Entrance Animation (Shows Auth, Hides Loader if needed)
     intro: () => {
+        // If we are showing auth, hide the core loader immediately
+        if(!msToken) {
+            if(els.coreLoader) els.coreLoader.classList.add('loaded');
+        }
+        
         gsap.set(".auth-container", { y: 30, opacity: 0 }); 
         gsap.to(".auth-container", { y: 0, opacity: 1, duration: 1, ease: "power4.out", delay: 0.2 });
     },
 
-    // 2. View Switcher (Handles Glass Panel Transitions)
+    // 2. View Switcher
     switchView: (viewId) => {
         const views = [els.viewEmail, els.viewLicense, els.viewVerify, els.viewResume];
         const target = document.getElementById(viewId);
@@ -77,14 +84,13 @@ const UI = {
 
         if(target) {
             target.classList.remove('hidden');
-            // Small delay to allow display:block to render before opacity fade
             requestAnimationFrame(() => target.classList.add('active'));
         }
     },
 
-    // 3. Show Active License State
+    // 3. License States
     showLicenseCard: (productName, email) => {
-        if(els.licenseProd) els.licenseProd.innerText = "Studio Pro Access"; 
+        if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access"; 
         if(els.licenseEmail) els.licenseEmail.innerText = email;
         
         els.iconCheck.style.display = 'flex';
@@ -92,14 +98,13 @@ const UI = {
         els.licenseHeader.innerText = "Active License Found";
         
         els.btnSend.style.display = 'flex';
-        els.btnSend.className = 'primary-btn'; // Reset style
+        els.btnSend.className = 'primary-btn';
         els.btnSend.innerHTML = '<span>Verify It\'s You</span><div class="btn-loader"></div>';
         
         els.btnSend.onclick = () => requestOtp(false); 
         UI.switchView('view-license');
     },
     
-    // 4. Show No License Error
     showLicenseError: () => {
         UI.switchView('view-license');
         els.iconCheck.style.display = 'none';
@@ -111,7 +116,6 @@ const UI = {
         els.btnSend.style.display = 'none';
     },
 
-    // 5. Show Terminated Error
     showTerminatedError: (email) => {
         UI.switchView('view-license');
         if(els.authSubtitle) els.authSubtitle.innerText = "Access Revoked";
@@ -119,11 +123,8 @@ const UI = {
         els.iconCheck.style.display = 'none';
         els.iconAlert.style.display = 'flex';
         els.licenseHeader.innerText = "Access Terminated";
-        
-        if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access";
         if(els.licenseEmail) els.licenseEmail.innerText = email;
 
-        // Change button to Contact Support
         els.btnSend.style.display = 'flex';
         els.btnSend.style.background = '#222'; 
         els.btnSend.style.border = '1px solid #333';
@@ -131,7 +132,7 @@ const UI = {
         els.btnSend.innerHTML = '<span>Contact Support</span>';
         
         els.btnSend.onclick = () => {
-            window.location.href = `mailto:${CONTACT_EMAIL}?subject=Access Termination Appeal&body=My email is ${email}. I believe my access was revoked in error.`;
+            window.location.href = `mailto:${CONTACT_EMAIL}?subject=Termination Appeal&body=Email: ${email}`;
         };
         showStatus("Admin has terminated your access.", true);
     },
@@ -140,21 +141,43 @@ const UI = {
         gsap.fromTo(".auth-container", { x: -5 }, { x: 5, duration: 0.1, repeat: 3, yoyo: true, ease: "none", clearProps: "x" });
     },
 
-    // 6. Unlock Animation (The "Reveal")
-    unlockTransition: (onComplete) => {
+    // 4. TRANSITION PHASE 1: Hide Auth & Prep Loader
+    prepareForCore: (onComplete) => {
+        // Ensure loader is visible (removed 'loaded' class) to act as curtain
+        if(els.coreLoader) els.coreLoader.classList.remove('loaded');
+        
         const tl = gsap.timeline({ onComplete });
         
-        tl.to("#auth-layer", { opacity: 0, duration: 0.5, pointerEvents: "none" })
-          .set("#auth-layer", { display: "none" })
-          .set("#main-ui", { visibility: "visible" })
-          // Animate Sidebar in from Left
-          .from("#sidebar", { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
-          // Animate Controls Staggered
-          .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
-          // Animate Toolbar Island
-          .from(".fab-container", { y: -20, opacity: 0, duration: 0.6, ease: "back.out(1.7)" }, "-=0.8")
-          // Animate Canvas Fade
-          .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
+        // Fade out auth layer
+        tl.to(els.authLayer, { opacity: 0, duration: 0.5, pointerEvents: "none" })
+          .set(els.authLayer, { display: "none" })
+          .set(els.mainUI, { visibility: "visible" });
+    },
+
+    // 5. TRANSITION PHASE 2: Reveal Interface (Called after Core loads)
+    revealInterface: () => {
+        // 1. Fade out the black curtain (Core Loader)
+        if(els.coreLoader) els.coreLoader.classList.add('loaded');
+
+        // 2. Animate elements in
+        const tl = gsap.timeline();
+        
+        tl.from(els.sidebar, { 
+            x: -40, 
+            opacity: 0, 
+            duration: 1, 
+            ease: "power3.out",
+            delay: 0.4 // Wait for loader fade
+        })
+        .from(".control-row", { 
+            x: -20, 
+            opacity: 0, 
+            stagger: 0.04, 
+            duration: 0.6, 
+            ease: "power2.out" 
+        }, "-=0.6")
+        .from(".fab", { scale: 0, duration: 0.4, ease: "back.out(1.7)" }, "-=0.8")
+        .from("canvas", { opacity: 0, duration: 1.2 }, "-=1.0");
     },
 
     updateRetries: (remaining) => {
@@ -167,8 +190,7 @@ const UI = {
         }
     },
 
-    // --- 7. PRECISION SLIDER INERTIA LOGIC ---
-    // Uses a Virtual Proxy to separate the UI handle from the logic value
+    // --- 6. SLIDER PHYSICS ---
     initSliders: () => {
         const ranges = document.querySelectorAll('input[type="range"]');
         if(!ranges.length) return;
@@ -176,143 +198,88 @@ const UI = {
         ranges.forEach(range => {
             const min = parseFloat(range.min);
             const max = parseFloat(range.max);
-            // Find companion number input (assumed to be sibling)
             const numInput = range.parentElement.querySelector('input[type="number"]');
 
-            // --- SYNC FUNCTION ---
-            // Updates both inputs and triggers the event for core.js
             const updateUI = (val) => {
-                // Clamp value
-                val = Math.max(min, Math.min(max, val));
-                
-                // Update Range Visual
                 range.value = val;
-                
-                // Update Number Display (Round for cleaner UI if needed)
-                if(numInput) numInput.value = Math.round(val * 10) / 10;
-                
-                // Dispatch event for Core Engine
+                if(numInput) numInput.value = val;
                 range.dispatchEvent(new Event('input', { bubbles: true }));
             };
 
-            // --- INERTIA DRAGGABLE ---
-            // Create a virtual proxy div to handle the physics calculation
-            const tracker = document.createElement("div"); 
+            const tracker = { x: 0 }; 
             
-            Draggable.create(tracker, {
-                trigger: range, // The user touches the range input
-                type: "x",      // Virtual movement axis
+            Draggable.create(document.createElement("div"), {
+                trigger: range,
+                type: "x",
                 inertia: true,
-                
                 onPress: function(e) {
-                    // 1. Map Click Position to Value
                     const rect = range.getBoundingClientRect();
                     const clickX = e.clientX - rect.left;
                     const pct = Math.max(0, Math.min(1, clickX / rect.width));
                     const val = min + pct * (max - min);
-                    
-                    // 2. Sync Proxy Position
-                    // We map the value range (e.g. 10-600) to a virtual pixel range (e.g. 0-1000)
-                    // This gives GSAP a coordinate system to throw
-                    this.x = val; 
-                    this.update(); // Sync Draggable internal state
-                    
+                    tracker.x = val; 
                     updateUI(val);
+                    this.update(); 
                 },
-                
                 onDrag: function() {
-                    // During drag, map the virtual X back to our value
-                    // Since we set x = val in onPress, dragging adds pixels to the value
-                    // We need to scale the sensitivity
-                    
-                    const sensitivity = (max - min) / range.offsetWidth; 
-                    // However, since we mapped x = val directly, 1px drag = 1 unit change?
-                    // Let's refine:
-                    // Using direct value mapping for the proxy is easiest.
-                    
-                    updateUI(this.x);
-                },
-                
-                onThrowUpdate: function() {
-                    // Inertia continues changing this.x
-                    updateUI(this.x);
-                },
-                
-                // Snap to limits so inertia doesn't fly off to infinity
-                snap: {
-                    x: function(value) {
-                        return Math.max(min, Math.min(max, value));
-                    }
+                    const rect = range.getBoundingClientRect();
+                    const valueRange = max - min;
+                    const deltaVal = (this.deltaX / rect.width) * valueRange;
+                    let newVal = parseFloat(range.value) + deltaVal;
+                    newVal = Math.max(min, Math.min(max, newVal));
+                    tracker.x = newVal;
+                    updateUI(newVal);
                 }
             });
             
-            // --- NUMBER INPUT LISTENER ---
             if(numInput) {
                 numInput.addEventListener('input', () => {
                     let v = parseFloat(numInput.value);
                     if(!isNaN(v)) {
-                        updateUI(v);
-                        // Update the draggable proxy so if they grab it next, it starts from here
-                        // (Requires accessing the draggable instance, skipping for simplicity as onPress handles it)
+                        v = Math.max(min, Math.min(max, v));
+                        range.value = v;
+                        range.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                 });
             }
         });
     },
 
-    // --- 8. MOBILE SHEET LOGIC (Dynamic Snap) ---
+    // --- 7. MOBILE SHEET PHYSICS ---
     initMobileDrag: () => {
-        // Only run on mobile widths
         if (window.innerWidth > 768) return;
-        
-        const sidebar = document.getElementById('sidebar');
-        const header = document.querySelector('.sidebar-header'); 
-        
-        if (!sidebar || !header || typeof Draggable === 'undefined') return;
+        const header = document.querySelector('.sidebar-header');
+        if (!els.sidebar || !header || typeof Draggable === 'undefined') return;
 
         const getSnapPoints = () => {
-            const h = sidebar.offsetHeight;
-            // Closed State: Sidebar sits at bottom, only header visible
-            // transformY is relative. 
-            // If sidebar is 'bottom: 0', then y=0 is fully open.
-            // y = (height - 80) is closed (header peek).
-            
-            const closedY = h - 70; // 70px header height
+            const h = els.sidebar.offsetHeight;
+            const closedY = h - 80; 
             const openY = 0; 
-            const midY = closedY * 0.4; // 40% open
-
+            const midY = closedY * 0.45; 
             return { openY, midY, closedY };
         };
 
-        // Initial Position (Closed)
-        const { closedY } = getSnapPoints();
-        gsap.set(sidebar, { y: closedY });
-
-        Draggable.create(sidebar, {
+        Draggable.create(els.sidebar, {
             type: "y",
             trigger: header,
             inertia: true,
             edgeResistance: 0.65,
             dragClickables: false, 
-            
-            // Bounds are dynamic, so we update them on press
+            bounds: { minY: 0, maxY: 1000 }, 
             onPress: function() {
                 const { closedY } = getSnapPoints();
-                this.applyBounds({ minY: 0, maxY: closedY + 20 }); // +20 for rubber band effect
+                this.applyBounds({ minY: 0, maxY: closedY });
             },
-            
             snap: {
                 y: function(value) {
                     const { openY, midY, closedY } = getSnapPoints();
-                    
                     const distToOpen = Math.abs(value - openY);
                     const distToMid = Math.abs(value - midY);
                     const distToClosed = Math.abs(value - closedY);
 
-                    // Smart Snap Logic
-                    if (distToOpen < 100 || (value < midY && this.deltaY < 0)) return openY; // Throw up
-                    if (distToClosed < 100 || (value > midY && this.deltaY > 0)) return closedY; // Throw down
-                    return midY;
+                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
+                    if (distToMid < distToClosed) return midY; 
+                    return closedY; 
                 }
             }
         });
@@ -327,7 +294,7 @@ const UI = {
     }
 };
 
-// --- HELPER: AUTH HEADERS ---
+// --- HELPER: HEADERS ---
 function getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
     if (msToken) headers['Authorization'] = `Bearer ${msToken}`;
@@ -336,23 +303,12 @@ function getAuthHeaders() {
 
 // --- APP INITIALIZATION ---
 async function initApp() {
-    UI.intro();
     setupOtpInteractions();
     bindEvents();
     
-    // Hide old save button if it exists
-    const oldSaveBtn = document.getElementById('btn-save');
-    if(oldSaveBtn) oldSaveBtn.style.display = 'none';
-
-    // 1. Health Check
-    try {
-        const health = await fetch(`${API_URL}/health`); 
-        const status = await health.json();
-        if(status.maintenance) return showStatus("Maintenance Mode", true);
-    } catch(e) {}
-
-    // 2. Resume Session
+    // 1. Resume Check
     if (msToken) {
+        // Keep Loader Visible (Don't run UI.intro yet)
         try {
             const res = await fetch(`${API_URL}/auth/validate`, {
                 method: 'POST',
@@ -363,21 +319,23 @@ async function initApp() {
             if (data.valid) {
                 userEmail = data.email || "User";
                 UI.showResume(userEmail);
-                setTimeout(unlockApp, 1500); 
+                // Transition to app
+                setTimeout(unlockApp, 1000); 
                 return;
             } else {
                 localStorage.removeItem("ms_token");
                 msToken = null;
                 if (data.code === "ACCESS_TERMINATED") {
-                    userEmail = data.email || ""; 
-                    UI.showTerminatedError(userEmail);
-                    return; 
+                    UI.intro(); // Hide loader, show auth
+                    UI.showTerminatedError(data.email || "");
+                    return;
                 }
             }
         } catch (e) { console.log("Session check failed."); }
     }
     
-    // If no session, show login
+    // 2. No Session -> Standard Entrance
+    UI.intro(); 
     UI.switchView('view-email');
 }
 
@@ -393,11 +351,16 @@ function loadProtectedCore() {
         return res.text();
     })
     .then(scriptContent => {
-        // Inject Core safely
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
-        console.log("Core Engine Loaded.");
+        console.log("Core Engine Injected.");
+        
+        // --- THE KEY CHANGE: REVEAL INTERFACE ---
+        // Give slight buffer for script execution
+        setTimeout(() => {
+            UI.revealInterface(); 
+        }, 500);
     })
     .catch(e => {
         console.error("Core Load Failed:", e);
@@ -409,7 +372,7 @@ function loadProtectedCore() {
     });
 }
 
-// --- STANDARD AUTH FUNCTIONS ---
+// --- AUTH FUNCTIONS ---
 async function checkLicense() {
     const email = els.emailInput.value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { 
@@ -495,13 +458,10 @@ function startResendTimer() {
     resendTimer = setInterval(() => { t--; if(t<=0) { clearInterval(resendTimer); els.btnResend.style.display = "block"; els.btnResend.innerText="Resend Code"; } }, 1000);
 }
 function unlockApp() { 
-    UI.unlockTransition(() => { 
+    UI.prepareForCore(() => { 
         loadProtectedCore(); 
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-            UI.initMobileDrag(); 
-            UI.initSliders(); 
-        }, 100);
+        UI.initMobileDrag(); 
+        UI.initSliders(); 
     }); 
 }
 function showStatus(msg, isErr) {
@@ -538,7 +498,7 @@ function bindEvents() {
     if(els.btnResetAuth) els.btnResetAuth.onclick = () => UI.switchView('view-email');
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
     
-    // Export Menu Toggles
+    // Export Menu
     const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
     if(expBtn && expMenu) {
         document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
@@ -546,10 +506,9 @@ function bindEvents() {
         expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
     }
     
-    // Global Reset
+    // Reset Settings
     const rst = document.getElementById('btn-reset-settings');
     if(rst) rst.onclick = () => window.MetaStar?.reset();
 }
 
-// Start
 document.addEventListener('DOMContentLoaded', initApp);
