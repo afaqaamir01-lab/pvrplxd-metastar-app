@@ -74,14 +74,18 @@ const UI = {
         const allStates = document.querySelectorAll('.auth-state');
         const target = document.getElementById(stateId);
         
-        // Update Status Text
-        if(els.terminalStatus) els.terminalStatus.innerText = statusText;
+        // Update Status Text (Only if visible)
+        if(els.terminalStatus && stateId !== 'state-resume') {
+            els.terminalStatus.innerText = statusText;
+        }
 
         // Hide all others
         allStates.forEach(el => {
             if(el !== target) {
                 el.classList.remove('active');
                 el.classList.add('hidden');
+                // Remove the toast mode if leaving resume state
+                el.classList.remove('compact-toast'); 
             }
         });
 
@@ -89,6 +93,15 @@ const UI = {
         if(target) {
             target.classList.remove('hidden');
             target.classList.add('active');
+            
+            // SPECIAL: Handle "Compact Toast" Mode for Resume State
+            if(stateId === 'state-resume') {
+                target.classList.add('compact-toast'); // Trigger CSS :has() selector
+                els.authContainer.classList.add('compact-mode'); // Fallback class if needed
+            } else {
+                target.classList.remove('compact-toast');
+                els.authContainer.classList.remove('compact-mode');
+            }
             
             // Kinetic Height Animation
             gsap.to(els.authContainer, { 
@@ -145,7 +158,8 @@ const UI = {
         const tl = gsap.timeline();
         tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
           .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
-          .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
+          .from(".fab-container", { scale: 0, rotation: -10, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6") // Updated to anim container
+          .from(".credit-badge", { y: 20, opacity: 0, duration: 0.6 }, "-=0.4") // Animate Badge
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
@@ -244,14 +258,14 @@ async function initApp() {
             if (data.valid) {
                 userEmail = data.email || "User";
                 
-                // Show Resume State
+                // Show Resume State (Toast Mode)
                 UI.switchState('state-resume', 'RESTORING SESSION');
                 const emailEl = document.getElementById('resume-email');
                 if(emailEl) emailEl.innerText = userEmail;
                 const bar = document.getElementById('resume-bar');
                 if(bar) requestAnimationFrame(() => bar.style.width = "100%");
                 
-                setTimeout(unlockApp, 1200);
+                setTimeout(unlockApp, 1500); // Slightly longer delay to let user see the "Toast"
                 return;
             } else {
                 localStorage.removeItem("ms_token");
