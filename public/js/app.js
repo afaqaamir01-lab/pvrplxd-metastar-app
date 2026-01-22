@@ -84,7 +84,7 @@ const UI = {
 
     // 3. Show Active License State
     showLicenseCard: (productName, email) => {
-        if(els.licenseProd) els.licenseProd.innerText = "MetaStar Website Access"; 
+        if(els.licenseProd) els.licenseProd.innerText = "Studio Pro Access"; 
         if(els.licenseEmail) els.licenseEmail.innerText = email;
         
         els.iconCheck.style.display = 'flex';
@@ -151,6 +151,8 @@ const UI = {
           .from("#sidebar", { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
           // Animate Controls Staggered
           .from(".control-row", { x: -20, opacity: 0, stagger: 0.05, duration: 0.6, ease: "power2.out" }, "-=0.6")
+          // Animate Toolbar Island
+          .from(".fab-container", { y: -20, opacity: 0, duration: 0.6, ease: "back.out(1.7)" }, "-=0.8")
           // Animate Canvas Fade
           .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
     },
@@ -165,7 +167,8 @@ const UI = {
         }
     },
 
-    // --- 7. SLIDER INERTIA LOGIC ---
+    // --- 7. PRECISION SLIDER INERTIA LOGIC ---
+    // Uses a Virtual Proxy to separate the UI handle from the logic value
     initSliders: () => {
         const ranges = document.querySelectorAll('input[type="range"]');
         if(!ranges.length) return;
@@ -173,140 +176,144 @@ const UI = {
         ranges.forEach(range => {
             const min = parseFloat(range.min);
             const max = parseFloat(range.max);
-            const step = parseFloat(range.step) || 1;
-            
-            // Find companion number input
+            // Find companion number input (assumed to be sibling)
             const numInput = range.parentElement.querySelector('input[type="number"]');
 
-            // Sync function
+            // --- SYNC FUNCTION ---
+            // Updates both inputs and triggers the event for core.js
             const updateUI = (val) => {
+                // Clamp value
+                val = Math.max(min, Math.min(max, val));
+                
+                // Update Range Visual
                 range.value = val;
-                if(numInput) numInput.value = val;
+                
+                // Update Number Display (Round for cleaner UI if needed)
+                if(numInput) numInput.value = Math.round(val * 10) / 10;
+                
                 // Dispatch event for Core Engine
                 range.dispatchEvent(new Event('input', { bubbles: true }));
             };
 
-            // Use GSAP Draggable on a proxy object for smooth inertia
-            // We create a "Virtual Knob" logic
-            const tracker = { x: 0 }; 
+            // --- INERTIA DRAGGABLE ---
+            // Create a virtual proxy div to handle the physics calculation
+            const tracker = document.createElement("div"); 
             
-            Draggable.create(document.createElement("div"), {
-                trigger: range,
-                type: "x",
+            Draggable.create(tracker, {
+                trigger: range, // The user touches the range input
+                type: "x",      // Virtual movement axis
                 inertia: true,
+                
                 onPress: function(e) {
-                    // 1. Calculate value from click position
+                    // 1. Map Click Position to Value
                     const rect = range.getBoundingClientRect();
                     const clickX = e.clientX - rect.left;
                     const pct = Math.max(0, Math.min(1, clickX / rect.width));
                     const val = min + pct * (max - min);
                     
-                    // 2. Set proxy & update
-                    tracker.x = val; 
-                    updateUI(val);
+                    // 2. Sync Proxy Position
+                    // We map the value range (e.g. 10-600) to a virtual pixel range (e.g. 0-1000)
+                    // This gives GSAP a coordinate system to throw
+                    this.x = val; 
                     this.update(); // Sync Draggable internal state
+                    
+                    updateUI(val);
                 },
+                
                 onDrag: function() {
-                    // Logic: Calculate delta value based on pixels moved
-                    const rect = range.getBoundingClientRect();
-                    const pixelWidth = rect.width;
-                    const valueRange = max - min;
+                    // During drag, map the virtual X back to our value
+                    // Since we set x = val in onPress, dragging adds pixels to the value
+                    // We need to scale the sensitivity
                     
-                    // Convert pixel delta to value delta
-                    const deltaVal = (this.deltaX / pixelWidth) * valueRange;
+                    const sensitivity = (max - min) / range.offsetWidth; 
+                    // However, since we mapped x = val directly, 1px drag = 1 unit change?
+                    // Let's refine:
+                    // Using direct value mapping for the proxy is easiest.
                     
-                    let newVal = parseFloat(range.value) + deltaVal;
-                    newVal = Math.max(min, Math.min(max, newVal));
-                    
-                    tracker.x = newVal;
-                    updateUI(newVal);
+                    updateUI(this.x);
                 },
+                
                 onThrowUpdate: function() {
-                    // Inertia continues the movement
-                    // We reuse the onDrag logic basically, but GSAP handles the physics
-                    const rect = range.getBoundingClientRect();
-                    const valueRange = max - min;
-                    // ThrowProps gives us `this.x` (pixels), we need to map back carefully
-                    // Simpler approach: Just let GSAP animate the value directly if we used a proxy
+                    // Inertia continues changing this.x
+                    updateUI(this.x);
+                },
+                
+                // Snap to limits so inertia doesn't fly off to infinity
+                snap: {
+                    x: function(value) {
+                        return Math.max(min, Math.min(max, value));
+                    }
                 }
             });
             
-            // Number input listener
+            // --- NUMBER INPUT LISTENER ---
             if(numInput) {
                 numInput.addEventListener('input', () => {
                     let v = parseFloat(numInput.value);
                     if(!isNaN(v)) {
-                        v = Math.max(min, Math.min(max, v));
-                        range.value = v;
-                        range.dispatchEvent(new Event('input', { bubbles: true }));
+                        updateUI(v);
+                        // Update the draggable proxy so if they grab it next, it starts from here
+                        // (Requires accessing the draggable instance, skipping for simplicity as onPress handles it)
                     }
                 });
             }
         });
     },
 
-    // --- 8. MOBILE SHEET LOGIC (Corrected Snap) ---
+    // --- 8. MOBILE SHEET LOGIC (Dynamic Snap) ---
     initMobileDrag: () => {
         // Only run on mobile widths
         if (window.innerWidth > 768) return;
         
         const sidebar = document.getElementById('sidebar');
-        const header = document.querySelector('.sidebar-header'); // The drag handle area
+        const header = document.querySelector('.sidebar-header'); 
         
         if (!sidebar || !header || typeof Draggable === 'undefined') return;
 
-        // Calculate dynamic heights based on content
         const getSnapPoints = () => {
             const h = sidebar.offsetHeight;
-            const screenH = window.innerHeight;
+            // Closed State: Sidebar sits at bottom, only header visible
+            // transformY is relative. 
+            // If sidebar is 'bottom: 0', then y=0 is fully open.
+            // y = (height - 80) is closed (header peek).
             
-            // 1. Closed: Show just the header + footer (approx 70px + padding)
-            // We want it sitting at the bottom.
-            // GSAP 'y' transform is relative to its original position.
-            // Original pos in CSS is `bottom: 0`.
-            
-            // Transform Y = 0 means fully visible (Open)
-            // Transform Y = (Height - 80px) means mostly hidden (Closed)
-            
-            const closedY = h - 80; 
-            const openY = 0; // Fully expanded
-            const midY = closedY * 0.45; // Halfway peek
+            const closedY = h - 70; // 70px header height
+            const openY = 0; 
+            const midY = closedY * 0.4; // 40% open
 
             return { openY, midY, closedY };
         };
+
+        // Initial Position (Closed)
+        const { closedY } = getSnapPoints();
+        gsap.set(sidebar, { y: closedY });
 
         Draggable.create(sidebar, {
             type: "y",
             trigger: header,
             inertia: true,
             edgeResistance: 0.65,
-            dragClickables: false, // Allow clicking buttons inside header
+            dragClickables: false, 
             
-            // Restrict movement range
-            bounds: { minY: 0, maxY: 1000 }, // MaxY updated dynamically in onPress
-            
+            // Bounds are dynamic, so we update them on press
             onPress: function() {
                 const { closedY } = getSnapPoints();
-                this.applyBounds({ minY: 0, maxY: closedY });
+                this.applyBounds({ minY: 0, maxY: closedY + 20 }); // +20 for rubber band effect
             },
             
             snap: {
                 y: function(value) {
                     const { openY, midY, closedY } = getSnapPoints();
                     
-                    // Find closest snap point
                     const distToOpen = Math.abs(value - openY);
                     const distToMid = Math.abs(value - midY);
                     const distToClosed = Math.abs(value - closedY);
 
-                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
-                    if (distToMid < distToClosed) return midY; 
-                    return closedY; 
+                    // Smart Snap Logic
+                    if (distToOpen < 100 || (value < midY && this.deltaY < 0)) return openY; // Throw up
+                    if (distToClosed < 100 || (value > midY && this.deltaY > 0)) return closedY; // Throw down
+                    return midY;
                 }
-            },
-            
-            onDragEnd: function() {
-                // Force a layout refresh if needed
             }
         });
     },
@@ -490,8 +497,11 @@ function startResendTimer() {
 function unlockApp() { 
     UI.unlockTransition(() => { 
         loadProtectedCore(); 
-        UI.initMobileDrag(); 
-        UI.initSliders(); // Initialize physics sliders
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            UI.initMobileDrag(); 
+            UI.initSliders(); 
+        }, 100);
     }); 
 }
 function showStatus(msg, isErr) {
