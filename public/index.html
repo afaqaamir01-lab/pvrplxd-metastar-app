@@ -131,15 +131,17 @@
                 </div>
             </div>
 
-            <div id="state-resume" class="auth-state hidden compact-toast">
-                <div class="toast-content-row">
-                    <div class="loader-spinner-small"></div>
-                    <div class="toast-text-group">
-                        <div class="msg-header-small">AUTHENTICATING AS</div>
-                        <div id="resume-email" class="msg-sub-small"></div>
-                    </div>
+            <div id="state-resume" class="auth-state hidden" style="align-items: center;">
+                <div class="icon-stage">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </div>
-                <div id="resume-bar" class="toast-progress-bar" style="width:0%;"></div>
+                <div class="msg-header">WELCOME BACK</div>
+                <div id="resume-email" class="msg-sub"></div>
+                
+                <div class="scan-loader">
+                    <div id="resume-bar" class="scan-bar" style="width:0%; animation:none; transition: width 1.2s ease-in-out;"></div>
+                </div>
+                <div class="scan-text">RESTORING SESSION...</div>
             </div>
 
             <div id="status-msg" class="status-toast"></div>
@@ -154,32 +156,26 @@
         
         <main id="viewport">
             <canvas id="canvas"></canvas>
+            
+            <div class="zoom-badge" id="zoomBadge">
+                <svg class="zoom-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span id="zoom-val">100%</span>
+            </div>
         </main>
 
         <div class="fab-container">
-            <div class="zoom-control-pill">
-                <button id="btn-zoom-dec" class="zoom-btn" title="Zoom Out">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-                
-                <span id="zoom-val">100%</span>
-                
-                <button id="btn-zoom-inc" class="zoom-btn" title="Zoom In">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-            </div>
-
             <button class="fab" id="btn-export-trigger" title="Export">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </button>
-            
             <div class="export-menu" id="export-menu">
                 <button class="menu-item" data-fmt="png">Save PNG</button>
-                <div class="menu-divider"></div>
                 <button class="menu-item" data-fmt="jpg">Save JPG</button>
                 <div class="menu-divider"></div>
-                <button class="menu-item highlight" data-fmt="svg">
-                    <svg class="menu-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                <button class="menu-item highlight" data-fmt="svg" style="justify-content: flex-start; gap: 8px;">
+                    <svg class="menu-icon-svg" style="opacity: 1;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
                     Export SVG
                 </button>
             </div>
@@ -196,8 +192,6 @@
             </div>
             
             <div class="sidebar-content">
-
-                <div class="sidebar-divider"></div>
                 
                 <div class="control-section">
                     <div class="section-label">
@@ -236,6 +230,10 @@
                     <div class="control-row">
                         <label>Skew Y</label>
                         <div class="slider-group"><input type="range" id="r-sy" min="-100" max="100"><input type="number" id="n-sy"></div>
+                    </div>
+                    <div class="control-row">
+                        <label>Scale</label>
+                        <div class="slider-group"><input type="range" id="r-z" min="10" max="400"><input type="number" id="n-z"></div>
                     </div>
                     <div class="control-row">
                         <label>Curve</label>
