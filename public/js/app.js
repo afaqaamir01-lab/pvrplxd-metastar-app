@@ -1,14 +1,14 @@
 /**
- * METASTAR STUDIO PRO - Main Controller v5.0
- * - Terminal State Logic
- * - Kinetic UI Transitions
- * - exact Mobile Sheet Physics (Open/Mid/Closed)
+ * METASTAR STUDIO PRO - Main Controller v5.1
+ * - Fixed Resume Animation Jitter
+ * - Enhanced Mobile Drag Physics (Handle-based)
+ * - Wired Zoom Controls
  * - Core Engine Injection
  */
 
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastarpro"; 
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
 
 // --- STATE ---
@@ -46,6 +46,10 @@ const els = {
     btnRefresh: document.getElementById('btn-refresh-license'),
     btnContact: document.getElementById('btn-contact-support'),
 
+    // Zoom Controls
+    btnZoomInc: document.getElementById('btn-zoom-inc'),
+    btnZoomDec: document.getElementById('btn-zoom-dec'),
+
     // Feedback
     statusMsg: document.getElementById('status-msg'),
     retryCounter: document.getElementById('retry-counter'),
@@ -54,7 +58,7 @@ const els = {
     coreLoader: document.getElementById('core-loader'),
     mainUI: document.getElementById('main-ui'),
     sidebar: document.getElementById('sidebar'),
-    zoomVal: document.getElementById('zoomBadge')
+    zoomVal: document.getElementById('zoom-val') // Fixed ID match
 };
 
 // --- UI CONTROLLER ---
@@ -84,7 +88,6 @@ const UI = {
             if(el !== target) {
                 el.classList.remove('active');
                 el.classList.add('hidden');
-                // Remove the toast mode if leaving resume state
                 el.classList.remove('compact-toast'); 
             }
         });
@@ -96,19 +99,22 @@ const UI = {
             
             // SPECIAL: Handle "Compact Toast" Mode for Resume State
             if(stateId === 'state-resume') {
-                target.classList.add('compact-toast'); // Trigger CSS :has() selector
-                els.authContainer.classList.add('compact-mode'); // Fallback class if needed
+                target.classList.add('compact-toast');
+                els.authContainer.classList.add('compact-mode');
+                
+                // FIX: Immediate Snap for Resume (No Animation Jitter)
+                gsap.set(els.authContainer, { height: "auto" }); 
             } else {
                 target.classList.remove('compact-toast');
                 els.authContainer.classList.remove('compact-mode');
+                
+                // Standard Kinetic Height Animation
+                gsap.to(els.authContainer, { 
+                    height: "auto", 
+                    duration: 0.4, 
+                    ease: "power2.out" 
+                });
             }
-            
-            // Kinetic Height Animation
-            gsap.to(els.authContainer, { 
-                height: "auto", 
-                duration: 0.4, 
-                ease: "power2.out" 
-            });
             
             // Fade In Content
             gsap.fromTo(target, 
@@ -158,8 +164,8 @@ const UI = {
         const tl = gsap.timeline();
         tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
           .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
-          .from(".fab-container", { scale: 0, rotation: -10, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6") // Updated to anim container
-          .from(".credit-badge", { y: 20, opacity: 0, duration: 0.6 }, "-=0.4") // Animate Badge
+          .from(".fab-container", { scale: 0, rotation: -10, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
+          .from(".credit-badge", { y: 20, opacity: 0, duration: 0.6 }, "-=0.4")
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
@@ -172,6 +178,7 @@ const UI = {
             const numInput = range.parentElement.querySelector('input[type="number"]');
             const updateUI = (val) => { range.value = val; if(numInput) numInput.value = Math.round(val); range.dispatchEvent(new Event('input')); };
             
+            // Allow dragging specifically on the track/knob
             Draggable.create(document.createElement("div"), {
                 trigger: range, type: "x", inertia: true,
                 onPress: function(e) {
@@ -192,8 +199,12 @@ const UI = {
 
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
-        const header = document.querySelector('.sidebar-header');
-        if (!els.sidebar || !header || typeof Draggable === 'undefined') return;
+        
+        // FIX: Use the handle if available, otherwise fallback to header
+        const handle = document.getElementById('sheet-handle');
+        const trigger = handle ? handle.parentElement : document.querySelector('.sidebar-header');
+        
+        if (!els.sidebar || !trigger || typeof Draggable === 'undefined') return;
 
         const getSnapPoints = () => {
             const h = els.sidebar.offsetHeight;
@@ -205,10 +216,11 @@ const UI = {
 
         Draggable.create(els.sidebar, {
             type: "y",
-            trigger: header,
+            trigger: trigger, // Drag from header/handle only
             inertia: true,
-            edgeResistance: 0.65,
+            edgeResistance: 0.85, // Heavier resistance
             dragClickables: false, 
+            dragResistance: 0.1, // Don't drag if user tries to scroll content
             bounds: { minY: 0, maxY: 1000 }, 
             onPress: function() {
                 const { closedY } = getSnapPoints();
@@ -221,9 +233,10 @@ const UI = {
                     const distToMid = Math.abs(value - midY);
                     const distToClosed = Math.abs(value - closedY);
 
-                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
-                    if (distToMid < distToClosed) return midY; 
-                    return closedY; 
+                    // Prioritize closing if dragged near bottom
+                    if (distToClosed < 100) return closedY;
+                    if (distToOpen < distToMid) return openY; 
+                    return midY; 
                 }
             }
         });
@@ -258,10 +271,8 @@ async function initApp() {
             if (data.valid) {
                 userEmail = data.email || "User";
                 
-                // FIX: Manually trigger the container entrance for returning users
-                // We use a slightly faster animation for the resume 'pop'
-                gsap.set(".auth-container", { scale: 0.95, opacity: 0 }); 
-                gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.4, ease: "back.out(1.1)" });
+                // FIX: Instant setup for resume (prevent animation flash)
+                gsap.set(".auth-container", { scale: 1, opacity: 1 });
                 
                 // Show Resume State (Toast Mode)
                 UI.switchState('state-resume', 'RESTORING SESSION');
@@ -270,7 +281,7 @@ async function initApp() {
                 const bar = document.getElementById('resume-bar');
                 if(bar) requestAnimationFrame(() => bar.style.width = "100%");
                 
-                setTimeout(unlockApp, 1500); // Slightly longer delay to let user see the "Toast"
+                setTimeout(unlockApp, 1200);
                 return;
             } else {
                 localStorage.removeItem("ms_token");
@@ -442,6 +453,10 @@ function bindEvents() {
     if(els.btnRefresh) els.btnRefresh.onclick = checkLicense;
     if(els.btnContact) els.btnContact.onclick = () => window.location.href = `mailto:${CONTACT_EMAIL}`;
     
+    // Zoom Controls (Pending Core Implementation)
+    if(els.btnZoomInc) els.btnZoomInc.onclick = () => window.MetaStar?.zoom?.(10);
+    if(els.btnZoomDec) els.btnZoomDec.onclick = () => window.MetaStar?.zoom?.(-10);
+
     // Back Actions (Reset to Identity)
     document.querySelectorAll('.action-back').forEach(btn => {
         btn.onclick = () => UI.switchState('state-identity', 'SYSTEM READY');
@@ -454,6 +469,7 @@ function bindEvents() {
     if(expBtn && expMenu) {
         document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
         expBtn.onclick = e => { e.stopPropagation(); expMenu.style.display = expMenu.style.display==='flex'?'none':'flex'; };
+        // Handle menu item clicks (works with separators too)
         expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
     }
     const rst = document.getElementById('btn-reset-settings');
