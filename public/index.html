@@ -227,9 +227,12 @@
                         <label>Fill</label>
                         <input type="color" id="starCol" value="#dfff00">
                     </div>
-                    <div class="control-row" data-bind="bg">
-                        <label>Background</label>
-                        <input type="color" id="bgCol" value="#050505">
+                    <div class="control-row" data-bind="c">
+                        <label>Curve</label>
+                        <div class="slider-group">
+                            <input type="range" id="r-c" min="0" max="100" step="0.5" value="50">
+                            <input type="number" id="n-c" inputmode="numeric" value="50">
+                        </div>
                     </div>
                 </div>
 
