@@ -291,7 +291,7 @@ canvas { display: block; width: 100%; height: 100%; }
 .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; min-height: 24px; }
 
 /* FIX: Fixed width for labels to align all sliders perfectly */
-.control-row > label { font-size: 11px; color: #ccc; font-weight: 500; width: 85px; min-width: 85px; flex-shrink: 0; white-space: nowrap; }
+.control-row > label { font-size: 11px; color: #ccc; font-weight: 500; width: 70px; min-width: 70px; flex-shrink: 0; white-space: nowrap; }
 .slider-group { display: flex; align-items: center; gap: 12px; flex: 1; margin-left: 12px; width: 100%; }
 
 /* FIX: Added margin:0 and vertical-align to fix centering issues */
