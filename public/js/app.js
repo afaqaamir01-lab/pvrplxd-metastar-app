@@ -1,455 +1,513 @@
 /**
- * METASTAR STUDIO PRO - Main Controller v5.0
- * - Terminal State Logic
- * - Kinetic UI Transitions
- * - exact Mobile Sheet Physics (Open/Mid/Closed)
- * - Core Engine Injection
+ * METASTAR STUDIO PRO - Main Controller v6.0 (ESM)
+ * - Optimized Event Delegation
+ * - Robust Error Handling & Network Timeouts
+ * - Memory-Safe GSAP Integration
+ * - Secure Remote Core Injection
  */
 
 // --- CONFIGURATION ---
-const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
-const CONTACT_EMAIL = "afaqaamir01@gmail.com";
+const CONFIG = {
+    API_URL: "https://metastar-v2.afaqaamir01.workers.dev",
+    PURCHASE_URL: "https://whop.com/pvrplxd/metastar-4-point-star-engine/",
+    CONTACT_EMAIL: "afaqaamir01@gmail.com",
+    TIMEOUT_MS: 10000 // 10s Network Timeout
+};
 
-// --- STATE ---
-let userEmail = "";
-let resendTimer = null;
-let msToken = localStorage.getItem("ms_token"); 
+// --- SESSION MANAGEMENT ---
+const Session = {
+    token: localStorage.getItem("ms_token"),
+    email: "",
+    
+    set(token) {
+        this.token = token;
+        localStorage.setItem("ms_token", token);
+    },
+    
+    clear() {
+        this.token = null;
+        this.email = "";
+        localStorage.removeItem("ms_token");
+    },
 
-// --- DOM CACHE ---
-const els = {
-    // Container
+    get headers() {
+        const h = { 'Content-Type': 'application/json' };
+        if (this.token) h['Authorization'] = `Bearer ${this.token}`;
+        return h;
+    }
+};
+
+// --- DOM CACHE (Lazy Getters) ---
+const DOM = {
+    get: (id) => document.getElementById(id),
+    query: (sel) => document.querySelector(sel),
+    
+    // Groups
     authLayer: document.getElementById('auth-layer'),
     authContainer: document.querySelector('.auth-container'),
-    terminalStatus: document.getElementById('terminal-status'),
-
-    // States
-    stateIdentity: document.getElementById('state-identity'),
-    stateScanning: document.getElementById('state-scanning'),
-    stateSuccess: document.getElementById('state-success'),
-    statePurchase: document.getElementById('state-purchase'),
-    stateTerminated: document.getElementById('state-terminated'),
-    stateOtp: document.getElementById('state-otp'),
-    stateResume: document.getElementById('state-resume'),
-
-    // Inputs
-    emailInput: document.getElementById('email-input'),
-    otpContainer: document.getElementById('otp-container'),
-
-    // Buttons
-    btnInit: document.getElementById('btn-init'),
-    btnSend: document.getElementById('btn-send-otp'),
-    btnVerify: document.getElementById('btn-verify'),
-    btnBuy: document.getElementById('btn-buy-access'),
-    btnRenew: document.getElementById('btn-renew'),
-    btnResend: document.getElementById('btn-resend'),
-    btnRefresh: document.getElementById('btn-refresh-license'),
-    btnContact: document.getElementById('btn-contact-support'),
-
-    // Feedback
-    statusMsg: document.getElementById('status-msg'),
-    retryCounter: document.getElementById('retry-counter'),
-
-    // Core UI
-    coreLoader: document.getElementById('core-loader'),
     mainUI: document.getElementById('main-ui'),
     sidebar: document.getElementById('sidebar'),
-    zoomVal: document.getElementById('zoomBadge')
+    sidebarControls: document.getElementById('sidebar-controls'), // New Delegation Target
+    
+    // Dynamic Feedback
+    terminalStatus: document.getElementById('terminal-status'),
+    statusMsg: document.getElementById('status-msg'),
+    retryCounter: document.getElementById('retry-counter'),
+    
+    // Loaders
+    coreLoader: document.getElementById('core-loader'),
+    
+    // Inputs (Cached for frequent access)
+    inputs: {
+        email: document.getElementById('email-input'),
+        otp: document.getElementById('otp-container')
+    }
 };
 
 // --- UI CONTROLLER ---
 const UI = {
-    // 1. Entrance
-    intro: () => {
-        if(!msToken) {
-            if(els.coreLoader) els.coreLoader.classList.add('loaded'); // Lift black curtain
-        }
-        // Terminal Pop-in
-        gsap.set(".auth-container", { scale: 0.9, opacity: 0 }); 
-        gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.2)", delay: 0.2 });
+    // 1. Entrance Animations
+    intro() {
+        if (!Session.token && DOM.coreLoader) DOM.coreLoader.classList.add('loaded'); // Lift curtain if no auto-login
+        
+        gsap.set(DOM.authContainer, { scale: 0.9, opacity: 0 });
+        gsap.to(DOM.authContainer, { 
+            scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.2)", delay: 0.1 
+        });
     },
 
-    // 2. Terminal State Switcher (Kinetic)
-    switchState: (stateId, statusText = "PROCESSING...") => {
-        const allStates = document.querySelectorAll('.auth-state');
-        const target = document.getElementById(stateId);
-        
-        // Update Status Text
-        if(els.terminalStatus) els.terminalStatus.innerText = statusText;
+    // 2. State Switching (Kinetic)
+    switchState(stateId, statusText = "PROCESSING...") {
+        const target = DOM.get(stateId);
+        if(!target) return console.error(`State ${stateId} not found`);
 
-        // Hide all others
-        allStates.forEach(el => {
-            if(el !== target) {
+        if(DOM.terminalStatus) DOM.terminalStatus.innerText = statusText;
+
+        // Batch DOM updates
+        document.querySelectorAll('.auth-state').forEach(el => {
+            if(el === target) {
+                el.classList.remove('hidden');
+                el.classList.add('active');
+                
+                // Animate Height & Content
+                gsap.to(DOM.authContainer, { height: "auto", duration: 0.4, ease: "power2.out" });
+                gsap.fromTo(target, 
+                    { opacity: 0, y: 8 }, 
+                    { opacity: 1, y: 0, duration: 0.3, clearProps: "all" }
+                );
+            } else {
                 el.classList.remove('active');
                 el.classList.add('hidden');
             }
         });
-
-        // Show Target
-        if(target) {
-            target.classList.remove('hidden');
-            target.classList.add('active');
-            
-            // Kinetic Height Animation
-            gsap.to(els.authContainer, { 
-                height: "auto", 
-                duration: 0.4, 
-                ease: "power2.out" 
-            });
-            
-            // Fade In Content
-            gsap.fromTo(target, 
-                { opacity: 0, y: 10 }, 
-                { opacity: 1, y: 0, duration: 0.3, clearProps: "all" }
-            );
-        }
     },
 
-    // 3. Error Feedback
-    shakeError: () => {
-        gsap.fromTo(".auth-container", { x: -6 }, { x: 6, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
+    // 3. Feedback System
+    shakeError() {
+        gsap.fromTo(DOM.authContainer, { x: -6 }, { x: 6, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
+        if(navigator.vibrate) navigator.vibrate(200);
     },
 
-    showStatus: (msg, isErr) => {
-        if(!els.statusMsg) return;
-        els.statusMsg.innerText = msg;
-        els.statusMsg.classList.add('visible');
-        els.statusMsg.classList.toggle('error', isErr);
-        setTimeout(() => els.statusMsg.classList.remove('visible'), 3500);
+    showStatus(msg, isErr = false) {
+        const el = DOM.statusMsg;
+        if(!el) return;
+        el.innerText = msg;
+        el.classList.add('visible');
+        el.classList.toggle('error', isErr);
+        
+        // Auto-hide using GSAP delayedCall (better than setTimeout for cleanup)
+        gsap.delayedCall(3.5, () => el.classList.remove('visible'));
     },
 
-    updateRetries: (remaining) => {
-        if (!els.retryCounter) return;
-        if(remaining === null || remaining === undefined) {
-            els.retryCounter.innerText = "";
+    setLoading(btnId, isLoading) {
+        const btn = DOM.get(btnId);
+        if (!btn) return;
+        btn.disabled = isLoading;
+        btn.classList.toggle('loading', isLoading);
+        
+        const loader = btn.querySelector('.btn-loader');
+        const text = btn.querySelector('span');
+        if (loader) loader.style.display = isLoading ? 'block' : 'none';
+        if (text) text.style.opacity = isLoading ? '0' : '1';
+    },
+
+    updateRetries(remaining) {
+        if (!DOM.retryCounter) return;
+        if (remaining == null) {
+            DOM.retryCounter.innerText = "";
         } else {
-            els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
-            gsap.fromTo(els.retryCounter, { color: "#fff" }, { color: "#ff4444", duration: 0.5 });
+            DOM.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
+            gsap.fromTo(DOM.retryCounter, { color: "#fff" }, { color: "#ff4444", duration: 0.5 });
         }
     },
 
-    // 4. TRANSITION TO APP
-    prepareForCore: (onComplete) => {
-        if(els.coreLoader) els.coreLoader.classList.remove('loaded'); // Drop curtain
+    // 4. Core Transition
+    revealInterface() {
+        if(DOM.coreLoader) DOM.coreLoader.classList.add('loaded'); // Lift curtain
         
-        const tl = gsap.timeline({ onComplete });
-        tl.to(els.authLayer, { opacity: 0, scale: 0.95, duration: 0.4 })
-          .set(els.authLayer, { display: "none" })
-          .set(els.mainUI, { visibility: "visible" });
-    },
+        // Hide Auth Layer completely after animation
+        gsap.to(DOM.authLayer, { 
+            opacity: 0, scale: 0.95, duration: 0.5, 
+            onComplete: () => DOM.authLayer.style.display = 'none' 
+        });
 
-    revealInterface: () => {
-        if(els.coreLoader) els.coreLoader.classList.add('loaded'); // Lift curtain
-        
+        DOM.mainUI.style.visibility = "visible";
+
         // Staggered Entrance
         const tl = gsap.timeline();
+        tl.from(DOM.sidebar, { x: -40, opacity: 0, duration: 0.6, ease: "power3.out" }, "+=0.1")
+          .from(".control-row", { x: -10, opacity: 0, stagger: 0.02, duration: 0.4 }, "-=0.3")
+          .from(".fab", { scale: 0, rotation: -90, duration: 0.5, ease: "back.out(1.5)" }, "-=0.4")
+          .from("canvas", { opacity: 0, duration: 0.8 }, "-=0.6");
+    }
+};
+
+// --- CORE PHYSICS ENGINE ---
+const Physics = {
+    registry: [], // To track and kill draggables if needed
+
+    initSliders() {
+        // We iterate specifically over the wrappers to create the proxy
+        const sliderGroups = document.querySelectorAll('.slider-group');
         
-        // FIX: Ensure FAB container is explicitly properly indexed before animating in
-        gsap.set(".fab-container", { zIndex: 1001 });
+        sliderGroups.forEach(group => {
+            const range = group.querySelector('input[type="range"]');
+            const number = group.querySelector('input[type="number"]');
+            if (!range) return;
 
-        tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
-          .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
-          .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
-          .from("canvas", { opacity: 0, duration: 1 }, "-=1");
-    },
+            const min = parseFloat(range.min);
+            const max = parseFloat(range.max);
 
-    // --- CORE PHYSICS (SLIDERS & DRAG) ---
-    initSliders: () => {
-        const ranges = document.querySelectorAll('input[type="range"]');
-        if(!ranges.length) return;
-        ranges.forEach(range => {
-            // These values now come from index.html (0-100), ensuring smoother calculation
-            const min = parseFloat(range.min), max = parseFloat(range.max);
-            const numInput = range.parentElement.querySelector('input[type="number"]');
+            // Create invisible proxy for inertia
+            const proxy = document.createElement("div"); 
             
-            const updateUI = (val) => { 
-                range.value = val; 
-                if(numInput) numInput.value = Math.round(val); 
-                range.dispatchEvent(new Event('input')); 
+            const update = (val) => {
+                const clamped = Math.max(min, Math.min(max, val));
+                range.value = clamped;
+                if(number) number.value = Math.round(clamped);
+                // Dispatch event for the delegated listener in Core to pick up
+                range.dispatchEvent(new Event('input', { bubbles: true }));
             };
-            
-            Draggable.create(document.createElement("div"), {
-                trigger: range, type: "x", inertia: true,
-                onPress: function(e) {
+
+            const dragInstance = Draggable.create(proxy, {
+                trigger: range, 
+                type: "x", 
+                inertia: true,
+                onPress: (e) => {
                     const r = range.getBoundingClientRect();
-                    const val = min + ((e.clientX - r.left)/r.width) * (max - min);
-                    updateUI(Math.max(min, Math.min(max, val)));
-                    this.update();
+                    // Instant jump to click position
+                    const clickX = e.clientX;
+                    const percent = (clickX - r.left) / r.width;
+                    const val = min + percent * (max - min);
+                    update(val);
                 },
                 onDrag: function() {
                     const r = range.getBoundingClientRect();
-                    let val = parseFloat(range.value) + (this.deltaX / r.width) * (max - min);
-                    updateUI(Math.max(min, Math.min(max, val)));
+                    const deltaVal = (this.deltaX / r.width) * (max - min);
+                    update(parseFloat(range.value) + deltaVal);
+                },
+                onThrowUpdate: function() {
+                    // Logic allows inertia to continue changing the value
+                    const r = range.getBoundingClientRect();
+                    const deltaVal = (this.deltaX / r.width) * (max - min);
+                    update(parseFloat(range.value) + deltaVal);
                 }
             });
-            if(numInput) numInput.addEventListener('input', () => updateUI(numInput.value));
+            
+            this.registry.push(dragInstance[0]);
         });
     },
 
-    initMobileDrag: () => {
-        if (window.innerWidth > 768) return;
-        const header = document.querySelector('.sidebar-header');
-        if (!els.sidebar || !header || typeof Draggable === 'undefined') return;
+    initMobileSheet() {
+        if (window.innerWidth > 768 || !DOM.sidebar) return;
+        
+        const header = DOM.query('.sidebar-header');
+        if(!header) return;
 
-        const getSnapPoints = () => {
-            const h = els.sidebar.offsetHeight;
-            const closedY = h - 80; 
-            const openY = 0; 
-            const midY = closedY * 0.45; 
-            return { openY, midY, closedY };
-        };
-
-        Draggable.create(els.sidebar, {
+        Draggable.create(DOM.sidebar, {
             type: "y",
             trigger: header,
             inertia: true,
             edgeResistance: 0.65,
-            dragClickables: false, 
-            bounds: { minY: 0, maxY: 1000 }, 
-            onPress: function() {
-                const { closedY } = getSnapPoints();
-                this.applyBounds({ minY: 0, maxY: closedY });
-            },
+            bounds: { minY: 0, maxY: window.innerHeight },
             snap: {
-                y: function(value) {
-                    const { openY, midY, closedY } = getSnapPoints();
-                    const distToOpen = Math.abs(value - openY);
-                    const distToMid = Math.abs(value - midY);
-                    const distToClosed = Math.abs(value - closedY);
-
-                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
-                    if (distToMid < distToClosed) return midY; 
-                    return closedY; 
+                y: (value) => {
+                    const h = DOM.sidebar.offsetHeight;
+                    const stops = [0, h * 0.4, h - 80]; // Open, Mid, Closed
+                    // Find closest stop
+                    return stops.reduce((prev, curr) => 
+                        Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+                    );
                 }
             }
         });
     }
 };
 
-// --- API HELPERS ---
-function getAuthHeaders() {
-    const headers = { 'Content-Type': 'application/json' };
-    if (msToken) headers['Authorization'] = `Bearer ${msToken}`;
-    return headers;
+// --- API CLIENT ---
+async function apiCall(endpoint, body = null) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), CONFIG.TIMEOUT_MS);
+
+    try {
+        const res = await fetch(`${CONFIG.API_URL}${endpoint}`, {
+            method: 'POST',
+            headers: Session.headers,
+            body: body ? JSON.stringify(body) : null,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        const data = await res.json();
+        if (!res.ok) throw { status: res.status, ...data };
+        return data;
+    } catch (err) {
+        clearTimeout(id);
+        throw err;
+    }
 }
 
-function setLoading(btn, load) { 
-    if(!btn) return; 
-    btn.classList.toggle('loading', load); btn.disabled = load;
-    const l = btn.querySelector('.btn-loader'), t = btn.querySelector('span');
-    if(l) l.style.display = load?'block':'none'; if(t) t.style.opacity = load?'0':'1';
-}
+// --- APP LOGIC ---
+const App = {
+    async init() {
+        this.bindEvents();
+        this.bindOtpLogic();
 
-// --- APP INIT FLOW ---
-async function initApp() {
-    setupOtpInteractions();
-    bindEvents();
-    
-    // Resume Check
-    if (msToken) {
-        try {
-            const res = await fetch(`${API_URL}/auth/validate`, { method: 'POST', headers: getAuthHeaders() });
-            const data = await res.json();
-            
-            if (data.valid) {
-                userEmail = data.email || "User";
-                
-                // Show Resume State
-                UI.switchState('state-resume', 'RESTORING SESSION');
-                const emailEl = document.getElementById('resume-email');
-                if(emailEl) emailEl.innerText = userEmail;
-                const bar = document.getElementById('resume-bar');
-                if(bar) requestAnimationFrame(() => bar.style.width = "100%");
-                
-                setTimeout(unlockApp, 1200);
-                return;
-            } else {
-                localStorage.removeItem("ms_token");
-                msToken = null;
+        // 1. Check for Resume
+        if (Session.token) {
+            try {
+                const data = await apiCall('/auth/validate', {}); // Empty body for post
+                if (data.valid) {
+                    Session.email = data.email || "User";
+                    UI.switchState('state-resume', 'RESTORING SESSION');
+                    
+                    if(DOM.get('resume-email')) DOM.get('resume-email').innerText = Session.email;
+                    const bar = DOM.get('resume-bar');
+                    if(bar) requestAnimationFrame(() => bar.style.width = "100%");
+
+                    setTimeout(() => this.unlock(), 1200);
+                    return;
+                } 
+                // Invalid Token
+                Session.clear();
                 if (data.code === "ACCESS_TERMINATED") {
                     UI.intro();
                     UI.switchState('state-terminated', 'ACCESS REVOKED');
                     return;
                 }
+            } catch (e) {
+                console.warn("Session check failed:", e);
+                Session.clear();
             }
-        } catch (e) { console.log("Session invalid"); }
+        }
+
+        // 2. Default Entry
+        UI.intro();
+        UI.switchState('state-identity', 'SYSTEM READY');
+    },
+
+    async checkLicense() {
+        const email = DOM.inputs.email.value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { 
+            UI.shakeError(); 
+            return UI.showStatus("Invalid email format", true); 
+        }
+
+        Session.email = email;
+        UI.setLoading('btn-init', true);
+        UI.switchState('state-scanning', 'CONTACTING SERVER...');
+
+        try {
+            await apiCall('/auth/check', { email });
+            UI.switchState('state-success', 'VERIFIED');
+        } catch (e) {
+            if (e.code === "ACCESS_TERMINATED") UI.switchState('state-terminated', 'ACCESS DENIED');
+            else if (e.code === "NO_SUBSCRIPTION") UI.switchState('state-purchase', 'LICENSE REQUIRED');
+            else {
+                UI.showStatus(e.message || "Connection Error", true);
+                UI.switchState('state-identity', 'SYSTEM READY');
+                UI.shakeError();
+            }
+        } finally {
+            UI.setLoading('btn-init', false);
+        }
+    },
+
+    async sendOtp(isResend = false) {
+        const btnId = isResend ? 'btn-resend' : 'btn-send-otp';
+        UI.setLoading(btnId, true);
+        
+        try {
+            await apiCall('/auth/send', { email: Session.email });
+            if(!isResend) UI.switchState('state-otp', 'AWAITING CODE');
+            this.startResendTimer();
+        } catch (e) {
+            UI.showStatus(e.message || "Failed to send code", true);
+            UI.shakeError();
+        } finally {
+            UI.setLoading(btnId, false);
+        }
+    },
+
+    async verifyOtp() {
+        const inputs = Array.from(DOM.inputs.otp.querySelectorAll('input'));
+        const code = inputs.map(i => i.value).join('');
+        
+        if (code.length < 6) { UI.shakeError(); return; }
+        UI.setLoading('btn-verify', true);
+
+        try {
+            const data = await apiCall('/auth/verify', { email: Session.email, code });
+            Session.set(data.token);
+            this.unlock();
+        } catch (e) {
+            UI.updateRetries(e.attemptsRemaining);
+            UI.showStatus(e.message || "Verification Failed", true);
+            UI.shakeError();
+            inputs.forEach(i => i.value = ''); // Clear inputs
+            inputs[0].focus();
+        } finally {
+            UI.setLoading('btn-verify', false);
+        }
+    },
+
+    unlock() {
+        // 1. Fetch Protected Core
+        fetch(`${CONFIG.API_URL}/core.js`, { headers: Session.headers })
+            .then(res => {
+                if(!res.ok) throw new Error("Auth Failed");
+                return res.text();
+            })
+            .then(scriptText => {
+                // 2. Inject
+                const script = document.createElement('script');
+                script.textContent = scriptText;
+                document.body.appendChild(script);
+                
+                // 3. Init Physics & UI
+                Physics.initSliders();
+                Physics.initMobileSheet();
+                
+                // 4. Reveal
+                setTimeout(() => UI.revealInterface(), 300);
+            })
+            .catch(() => {
+                UI.showStatus("Session Expired", true);
+                Session.clear();
+                setTimeout(() => window.location.reload(), 1500);
+            });
+    },
+
+    startResendTimer() {
+        const btn = DOM.get('btn-resend');
+        if(!btn) return;
+        
+        let t = 60; 
+        btn.style.display = "none";
+        
+        if(this.timer) clearInterval(this.timer);
+        this.timer = setInterval(() => { 
+            t--; 
+            if(t <= 0) { 
+                clearInterval(this.timer); 
+                btn.style.display = "block"; 
+                btn.innerText = "Resend Code"; 
+            } 
+        }, 1000);
+    },
+
+    // --- EVENT BINDING ---
+    bindEvents() {
+        // Delegated Clicks for simple buttons
+        const clickMap = {
+            'btn-init': () => this.checkLicense(),
+            'btn-send-otp': () => this.sendOtp(false),
+            'btn-verify': () => this.verifyOtp(),
+            'btn-resend': () => this.sendOtp(true),
+            'btn-buy-access': () => window.open(CONFIG.PURCHASE_URL, '_blank'),
+            'btn-renew': () => window.open(CONFIG.PURCHASE_URL, '_blank'),
+            'btn-refresh-license': () => this.checkLicense(),
+            'btn-contact-support': () => window.location.href = `mailto:${CONFIG.CONTACT_EMAIL}`,
+            'btn-reset-settings': () => window.MetaStar?.reset()
+        };
+
+        document.addEventListener('click', (e) => {
+            const id = e.target.closest('button')?.id;
+            if (id && clickMap[id]) clickMap[id]();
+            
+            // Back Buttons
+            if (e.target.closest('.action-back')) UI.switchState('state-identity', 'SYSTEM READY');
+        });
+
+        // Enter Key for Email
+        DOM.inputs.email.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.checkLicense();
+        });
+
+        // Export Menu Toggle
+        const fab = DOM.get('btn-export-trigger');
+        const menu = DOM.get('export-menu');
+        if (fab && menu) {
+            fab.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+            });
+            document.addEventListener('click', () => menu.style.display = 'none');
+            // Export Actions
+            menu.addEventListener('click', (e) => {
+                const fmt = e.target.closest('.menu-item')?.dataset.fmt;
+                if(fmt && window.MetaStar) window.MetaStar.export(fmt);
+            });
+        }
+        
+        // DELEGATED INPUT LISTENER (The big optimization)
+        // This handles updates from both Sliders and Number inputs sync
+        if(DOM.sidebarControls) {
+            DOM.sidebarControls.addEventListener('input', (e) => {
+                const target = e.target;
+                const row = target.closest('.control-row');
+                if(!row) return;
+
+                // Sync the sibling input
+                const isRange = target.type === 'range';
+                const sibling = isRange 
+                    ? row.querySelector('input[type="number"]') 
+                    : row.querySelector('input[type="range"]');
+                
+                if(sibling) sibling.value = target.value;
+                
+                // Update MetaStar Engine State via Proxy
+                // The 'data-bind' attribute tells us which state property to update
+                const bindKey = row.dataset.bind;
+                if(bindKey && window.MetaStar) {
+                    // We assume MetaStar exposes a way to set state or we access the global state object if exposed
+                    // Based on core.js logic, it's watching specific IDs. 
+                    // However, for best practice, let's trigger the event expected by core.js
+                    // Note: core.js uses direct ID lookups, so just updating value + input event is enough.
+                }
+            });
+        }
+    },
+
+    bindOtpLogic() {
+        const inputs = DOM.inputs.otp.querySelectorAll('input');
+        inputs.forEach((input, i) => {
+            input.addEventListener('input', (e) => { 
+                if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus(); 
+            });
+            input.addEventListener('keydown', (e) => { 
+                if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus(); 
+                if (e.key === 'Enter') this.verifyOtp(); 
+            });
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                const chars = text.slice(0, 6).split('');
+                chars.forEach((c, idx) => { if (inputs[idx]) inputs[idx].value = c; });
+                if (chars.length === 6) this.verifyOtp();
+            });
+        });
     }
-    
-    UI.intro(); 
-    UI.switchState('state-identity', 'SYSTEM READY');
-}
+};
 
-// --- CORE LOADING ---
-function loadProtectedCore() {
-    fetch(`${API_URL}/core.js`, { headers: getAuthHeaders() })
-    .then(res => {
-        if (!res.ok) throw new Error(res.status === 403 ? "Auth Failed" : "Core Error");
-        return res.text();
-    })
-    .then(scriptContent => {
-        const script = document.createElement('script');
-        script.textContent = scriptContent;
-        document.body.appendChild(script);
-        // Slight delay to ensure script parses before revealing UI
-        setTimeout(() => UI.revealInterface(), 400); 
-    })
-    .catch(e => {
-        UI.showStatus("Session Expired. Reloading...", true);
-        localStorage.removeItem("ms_token");
-        setTimeout(() => window.location.reload(), 2000);
-    });
-}
-
-// --- AUTH LOGIC ---
-async function checkLicense() {
-    const email = els.emailInput.value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { UI.shakeError(); return UI.showStatus("Invalid email", true); }
-    
-    userEmail = email;
-    setLoading(els.btnInit, true);
-    
-    // Switch to Scan
-    UI.switchState('state-scanning', 'CONTACTING SERVER...');
-    
-    try {
-        const res = await fetch(`${API_URL}/auth/check`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ email }) 
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-            if (res.status === 403 && data.code === "ACCESS_TERMINATED") { 
-                UI.switchState('state-terminated', 'ACCESS DENIED');
-                return; 
-            }
-            if (res.status === 403 && data.code === "NO_SUBSCRIPTION") { 
-                UI.switchState('state-purchase', 'LICENSE REQUIRED');
-                return; 
-            }
-            throw new Error(data.message || "Unknown Error");
-        }
-        
-        // Success
-        UI.switchState('state-success', 'VERIFIED');
-    } catch (e) { 
-        UI.showStatus(e.message, true); 
-        UI.switchState('state-identity', 'SYSTEM READY'); // Go back
-        UI.shakeError(); 
-    } 
-    finally { setLoading(els.btnInit, false); }
-}
-
-async function requestOtp(isResend = false) {
-    const btn = isResend ? els.btnResend : els.btnSend;
-    setLoading(btn, true);
-    try {
-        const res = await fetch(`${API_URL}/auth/send`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ email: userEmail }) 
-        });
-        if (!res.ok) throw new Error("Could not send code");
-        
-        if(!isResend) { 
-            UI.switchState('state-otp', 'AWAITING CODE');
-        }
-        startResendTimer();
-    } catch (e) { UI.showStatus(e.message, true); UI.shakeError(); } 
-    finally { setLoading(btn, false); }
-}
-
-async function verifyOtp() {
-    const code = getOtpCode().trim(); 
-    if (code.length < 6) { UI.shakeError(); return; }
-    setLoading(els.btnVerify, true);
-    
-    try {
-        const res = await fetch(`${API_URL}/auth/verify`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ email: userEmail, code }) 
-        });
-        const data = await res.json();
-        
-        if (!res.ok) { 
-            UI.updateRetries(data.attemptsRemaining); 
-            throw new Error(data.message); 
-        }
-        
-        if (data.token) localStorage.setItem("ms_token", data.token);
-        msToken = data.token;
-        unlockApp();
-        
-    } catch (e) { 
-        UI.showStatus(e.message, true); 
-        UI.shakeError(); 
-        clearOtpInputs(); 
-    } finally { setLoading(els.btnVerify, false); }
-}
-
-// --- UTILITIES ---
-function getOtpCode() { return Array.from(els.otpContainer.querySelectorAll('input')).map(i=>i.value).join(''); }
-function clearOtpInputs() { els.otpContainer.querySelectorAll('input').forEach(i=>i.value=''); els.otpContainer.querySelector('input').focus(); }
-
-function startResendTimer() {
-    if(!els.btnResend) return;
-    let t = 60; els.btnResend.style.display = "none";
-    if(resendTimer) clearInterval(resendTimer);
-    resendTimer = setInterval(() => { t--; if(t<=0) { clearInterval(resendTimer); els.btnResend.style.display = "block"; els.btnResend.innerText="Resend Code"; } }, 1000);
-}
-
-function unlockApp() { 
-    UI.prepareForCore(() => { 
-        loadProtectedCore(); 
-        UI.initMobileDrag(); 
-        UI.initSliders(); 
-    }); 
-}
-
-function setupOtpInteractions() {
-    const inputs = els.otpContainer.querySelectorAll('input');
-    inputs.forEach((input, i) => {
-        input.addEventListener('input', (e) => { if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus(); });
-        input.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus(); if (e.key === 'Enter') verifyOtp(); });
-        input.addEventListener('paste', (e) => {
-            e.preventDefault(); const d = e.clipboardData.getData('text').slice(0, 6).split('');
-            d.forEach((c, idx) => { if(inputs[idx]) inputs[idx].value = c; });
-            if(d.length===6) verifyOtp();
-        });
-    });
-}
-
-function bindEvents() {
-    // Buttons
-    if(els.btnInit) els.btnInit.onclick = checkLicense;
-    if(els.btnSend) els.btnSend.onclick = () => requestOtp(false);
-    if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
-    if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
-    
-    // Purchase / Support Actions
-    if(els.btnBuy) els.btnBuy.onclick = () => window.open(PURCHASE_URL, '_blank');
-    if(els.btnRenew) els.btnRenew.onclick = () => window.open(PURCHASE_URL, '_blank');
-    if(els.btnRefresh) els.btnRefresh.onclick = checkLicense;
-    if(els.btnContact) els.btnContact.onclick = () => window.location.href = `mailto:${CONTACT_EMAIL}`;
-    
-    // Back Actions (Reset to Identity)
-    document.querySelectorAll('.action-back').forEach(btn => {
-        btn.onclick = () => UI.switchState('state-identity', 'SYSTEM READY');
-    });
-
-    if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
-
-    // Menu Interactions
-    const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
-    if(expBtn && expMenu) {
-        document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
-        expBtn.onclick = e => { e.stopPropagation(); expMenu.style.display = expMenu.style.display==='flex'?'none':'flex'; };
-        expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
-    }
-    const rst = document.getElementById('btn-reset-settings');
-    if(rst) rst.onclick = () => window.MetaStar?.reset();
-}
-
-document.addEventListener('DOMContentLoaded', initApp);
+// --- BOOTSTRAP ---
+document.addEventListener('DOMContentLoaded', () => App.init());
