@@ -328,8 +328,8 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
 .menu-item.highlight { color: var(--accent); }
 .zoom-badge { position: absolute; bottom: 32px; left: 32px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); padding: 10px 16px; border-radius: 50px; font-size: 12px; font-weight: 500; display: flex; gap: 8px; align-items: center; color: #fff; pointer-events: none; z-index: 80; }
 .zoom-icon-svg { width: 14px; height: 14px; color: var(--accent); }
-.credit-badge { position: absolute; bottom: 32px; right: 32px; color: var(--text-muted); font-size: 11px; font-weight: 500; text-decoration: none; padding: 8px 12px; border-radius: 50px; transition: color 0.2s; }
-.credit-badge:hover { color: #fff; }
+.credit-badge { position: absolute; bottom: 32px; right: 32px; z-index: 90; background: #ffffff; color: #000000; padding: 12px 24px; border-radius: 100px; text-decoration: none; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s; }
+.credit-badge:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(255, 255, 255, 0.25); }
 
 /* Mobile Adjustments */
 #sheet-handle { display: none; } 
