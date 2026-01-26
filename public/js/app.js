@@ -143,6 +143,10 @@ const UI = {
         
         // Staggered Entrance
         const tl = gsap.timeline();
+        
+        // FIX: Ensure FAB container is explicitly properly indexed before animating in
+        gsap.set(".fab-container", { zIndex: 1001 });
+
         tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
           .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
           .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
@@ -154,9 +158,15 @@ const UI = {
         const ranges = document.querySelectorAll('input[type="range"]');
         if(!ranges.length) return;
         ranges.forEach(range => {
+            // These values now come from index.html (0-100), ensuring smoother calculation
             const min = parseFloat(range.min), max = parseFloat(range.max);
             const numInput = range.parentElement.querySelector('input[type="number"]');
-            const updateUI = (val) => { range.value = val; if(numInput) numInput.value = Math.round(val); range.dispatchEvent(new Event('input')); };
+            
+            const updateUI = (val) => { 
+                range.value = val; 
+                if(numInput) numInput.value = Math.round(val); 
+                range.dispatchEvent(new Event('input')); 
+            };
             
             Draggable.create(document.createElement("div"), {
                 trigger: range, type: "x", inertia: true,
@@ -280,6 +290,7 @@ function loadProtectedCore() {
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
+        // Slight delay to ensure script parses before revealing UI
         setTimeout(() => UI.revealInterface(), 400); 
     })
     .catch(e => {
