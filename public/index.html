@@ -20,32 +20,22 @@
 </head>
 <body>
 
-    <svg style="display: none;">
-        <symbol id="icon-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></symbol>
-        <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></symbol>
-        <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></symbol>
-        <symbol id="icon-ban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></symbol>
-        <symbol id="icon-resume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
-        <symbol id="icon-geo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></symbol>
-        <symbol id="icon-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line></symbol>
-        <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></symbol>
-        <symbol id="icon-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></symbol>
-        <symbol id="icon-zoom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></symbol>
-    </svg>
-
     <div id="auth-layer" class="overlay">
-        <div class="auth-container">
+        <div class="glass-panel auth-container">
             
-            <header class="auth-header">
+            <div class="auth-header">
                 <div class="logo-text">METASTAR</div>
                 <div id="terminal-status" class="terminal-status">SYSTEM READY</div>
-            </header>
+            </div>
 
             <div id="state-identity" class="auth-state active">
                 <div class="input-wrapper">
                     <input type="email" id="email-input" class="modern-input" placeholder="Enter Access ID (Email)" autocomplete="email" inputmode="email">
-                    <div class="input-icon"><svg width="16" height="16"><use href="#icon-mail"/></svg></div>
+                    <div class="input-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    </div>
                 </div>
+                
                 <button id="btn-init" class="primary-btn">
                     <span>INITIALIZE SYSTEM</span>
                     <div class="btn-loader"></div>
@@ -53,23 +43,43 @@
             </div>
 
             <div id="state-scanning" class="auth-state hidden">
-                <div class="scan-loader"><div class="scan-bar"></div></div>
+                <div class="scan-loader">
+                    <div class="scan-bar"></div>
+                </div>
                 <div class="scan-text">VERIFYING CREDENTIALS...</div>
             </div>
 
             <div id="state-success" class="auth-state hidden">
-                <div class="icon-stage success"><svg width="32" height="32"><use href="#icon-check"/></svg></div>
+                <div class="icon-stage success">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </div>
                 <div class="msg-header">LICENSE VERIFIED</div>
-                <div class="license-badge"><span>PRODUCT:</span> MetaStar Engine Access</div>
-                <button id="btn-send-otp" class="primary-btn"><span>VERIFY IDENTITY</span><div class="btn-loader"></div></button>
-                <div class="footer-row"><button class="text-link action-back">Different ID</button></div>
+                
+                <div class="license-badge">
+                    <span>PRODUCT:</span> MetaStar Engine Access
+                </div>
+
+                <button id="btn-send-otp" class="primary-btn">
+                    <span>VERIFY IDENTITY</span>
+                    <div class="btn-loader"></div>
+                </button>
+                
+                <div class="footer-row">
+                    <button class="text-link action-back">Different ID</button>
+                </div>
             </div>
 
             <div id="state-purchase" class="auth-state hidden">
-                <div class="icon-stage warning"><svg width="32" height="32"><use href="#icon-alert"/></svg></div>
+                <div class="icon-stage warning">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
                 <div class="msg-header warning">NO SUBSCRIPTION FOUND</div>
                 <div class="msg-sub">Access to MetaStar requires an active license.</div>
-                <button id="btn-buy-access" class="primary-btn btn-purchase"><span>PURCHASE LICENSE &rarr;</span></button>
+
+                <button id="btn-buy-access" class="primary-btn btn-purchase">
+                    <span>PURCHASE LICENSE &rarr;</span>
+                </button>
+                
                 <div class="footer-row">
                     <button class="text-link" id="btn-refresh-license">Check Again</button>
                     <span class="sep">/</span>
@@ -78,10 +88,16 @@
             </div>
 
             <div id="state-terminated" class="auth-state hidden">
-                <div class="icon-stage danger"><svg width="32" height="32"><use href="#icon-ban"/></svg></div>
+                <div class="icon-stage danger">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
                 <div class="msg-header danger">ACCESS TERMINATED</div>
                 <div class="msg-sub">Your license has been revoked by admin.</div>
-                <button id="btn-renew" class="primary-btn btn-purchase"><span>RENEW ACCESS &rarr;</span></button>
+
+                <button id="btn-renew" class="primary-btn btn-purchase">
+                    <span>RENEW ACCESS &rarr;</span>
+                </button>
+                
                 <div class="footer-row">
                     <button class="text-link" id="btn-contact-support">Contact Support</button>
                     <span class="sep">/</span>
@@ -91,16 +107,23 @@
 
             <div id="state-otp" class="auth-state hidden">
                 <div class="msg-sub">ENTER SECURITY CODE</div>
+                
                 <div class="otp-group" id="otp-container">
-                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                    <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                     <input type="text" maxlength="1" class="otp-digit" inputmode="numeric" pattern="[0-9]*">
                 </div>
-                <button id="btn-verify" class="primary-btn"><span>UNLOCK ENGINE</span><div class="btn-loader"></div></button>
+                
+                <button id="btn-verify" class="primary-btn">
+                    <span>UNLOCK ENGINE</span>
+                    <div class="btn-loader"></div>
+                </button>
+                
                 <div id="retry-counter" class="retry-counter"></div>
+
                 <div class="footer-row">
                     <button id="btn-resend" class="text-link">Resend Code</button>
                     <span class="sep">/</span>
@@ -109,20 +132,25 @@
             </div>
 
             <div id="state-resume" class="auth-state hidden" style="align-items: center;">
-                <div class="icon-stage"><svg width="32" height="32"><use href="#icon-resume"/></svg></div>
+                <div class="icon-stage">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
                 <div class="msg-header">WELCOME BACK</div>
                 <div id="resume-email" class="msg-sub"></div>
+                
                 <div class="scan-loader">
                     <div id="resume-bar" class="scan-bar" style="width:0%; animation:none; transition: width 1.2s ease-in-out;"></div>
                 </div>
                 <div class="scan-text">RESTORING SESSION...</div>
             </div>
 
-            <div id="status-msg" class="status-toast" role="alert"></div>
+            <div id="status-msg" class="status-toast"></div>
         </div>
     </div>
 
-    <div id="core-loader"><div class="loader-spinner"></div></div>
+    <div id="core-loader">
+        <div class="loader-spinner"></div>
+    </div>
 
     <div id="main-ui" style="visibility: hidden;">
         
@@ -130,16 +158,19 @@
             <canvas id="canvas"></canvas>
             
             <div class="zoom-badge" id="zoomBadge">
-                <svg class="zoom-icon-svg"><use href="#icon-zoom"/></svg>
+                <svg class="zoom-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
                 <span id="zoom-val">100%</span>
             </div>
         </main>
 
         <div class="fab-container">
-            <button class="fab" id="btn-export-trigger" title="Export Menu" aria-label="Open Export Options">
-                <svg width="20" height="20"><use href="#icon-export"/></svg>
+            <button class="fab" id="btn-export-trigger" title="Export">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </button>
-            <div class="export-menu" id="export-menu" aria-hidden="true">
+            <div class="export-menu" id="export-menu">
                 <button class="menu-item" data-fmt="png">Save PNG</button>
                 <button class="menu-item" data-fmt="jpg">Save JPG</button>
                 <div class="menu-divider"></div>
@@ -150,63 +181,70 @@
         <aside id="sidebar">
             <div id="sheet-handle"></div>
             
-            <header class="sidebar-header" id="mobile-drag-trigger">
+            <div class="sidebar-header" id="mobile-drag-trigger">
                 <span class="brand">MetaStar</span>
                 <div class="header-tools">
-                    <button class="icon-btn" id="btn-reset-settings" title="Reset All" aria-label="Reset Settings">↺</button>
+                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">↺</button>
                 </div>
-            </header>
+            </div>
             
-            <div class="sidebar-content" id="sidebar-controls">
+            <div class="sidebar-content">
                 
                 <div class="control-section">
-                    <div class="section-label"><svg width="12" height="12"><use href="#icon-geo"/></svg>Geometry</div>
-                    
-                    <div class="control-row" data-bind="t">
+                    <div class="section-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                        Geometry
+                    </div>
+                    <div class="control-row">
                         <label>Top</label>
-                        <div class="slider-group"><input type="range" id="r-t" min="0" max="100"><input type="number" id="n-t" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-t" min="0" max="100"><input type="number" id="n-t"></div>
                     </div>
-                    <div class="control-row" data-bind="r">
+                    <div class="control-row">
                         <label>Right</label>
-                        <div class="slider-group"><input type="range" id="r-r" min="0" max="100"><input type="number" id="n-r" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-r" min="0" max="100"><input type="number" id="n-r"></div>
                     </div>
-                    <div class="control-row" data-bind="b">
+                    <div class="control-row">
                         <label>Bottom</label>
-                        <div class="slider-group"><input type="range" id="r-b" min="0" max="100"><input type="number" id="n-b" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-b" min="0" max="100"><input type="number" id="n-b"></div>
                     </div>
-                    <div class="control-row" data-bind="l">
+                    <div class="control-row">
                         <label>Left</label>
-                        <div class="slider-group"><input type="range" id="r-l" min="0" max="100"><input type="number" id="n-l" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-l" min="0" max="100"><input type="number" id="n-l"></div>
                     </div>
                 </div>
 
                 <div class="sidebar-divider"></div>
 
                 <div class="control-section">
-                    <div class="section-label"><svg width="12" height="12"><use href="#icon-transform"/></svg>Transform</div>
-                    
-                    <div class="control-row" data-bind="sx">
+                    <div class="section-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line></svg>
+                        Transform
+                    </div>
+                    <div class="control-row">
                         <label>Skew X</label>
-                        <div class="slider-group"><input type="range" id="r-sx" min="-50" max="50"><input type="number" id="n-sx" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-sx" min="-50" max="50"><input type="number" id="n-sx"></div>
                     </div>
-                    <div class="control-row" data-bind="sy">
+                    <div class="control-row">
                         <label>Skew Y</label>
-                        <div class="slider-group"><input type="range" id="r-sy" min="-50" max="50"><input type="number" id="n-sy" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-sy" min="-50" max="50"><input type="number" id="n-sy"></div>
                     </div>
-                    <div class="control-row" data-bind="z">
+                    <div class="control-row">
                         <label>Scale</label>
-                        <div class="slider-group"><input type="range" id="r-z" min="10" max="200"><input type="number" id="n-z" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-z" min="10" max="200"><input type="number" id="n-z"></div>
                     </div>
-                    <div class="control-row" data-bind="c">
+                    <div class="control-row">
                         <label>Curve</label>
-                        <div class="slider-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c" inputmode="numeric"></div>
+                        <div class="slider-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div>
                     </div>
                 </div>
 
                 <div class="sidebar-divider"></div>
 
                 <div class="control-section">
-                    <div class="section-label"><svg width="12" height="12"><use href="#icon-settings"/></svg>Guides & Style</div>
+                    <div class="section-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+                        Guides & Style
+                    </div>
                     
                     <div class="control-row">
                         <label>Grid</label>
@@ -223,16 +261,13 @@
                         </div>
                     </div>
                     
-                    <div class="control-row" data-bind="fill">
+                    <div class="control-row">
                         <label>Fill</label>
                         <input type="color" id="starCol" value="#dfff00">
                     </div>
-                    <div class="control-row" data-bind="c">
-                        <label>Curve</label>
-                        <div class="slider-group">
-                            <input type="range" id="r-c" min="0" max="100" step="0.5" value="50">
-                            <input type="number" id="n-c" inputmode="numeric" value="50">
-                        </div>
+                    <div class="control-row">
+                        <label>Background</label>
+                        <input type="color" id="bgCol" value="#050505">
                     </div>
                 </div>
 
@@ -245,9 +280,11 @@
             </div>
         </aside>
 
-        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">Made by Pvrplxd</a>
+        <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">
+            Made by Pvrplxd
+        </a>
     </div>
 
-    <script type="module" src="js/app.js"></script>
+    <script src="js/app.js" defer></script>
 </body>
 </html>
