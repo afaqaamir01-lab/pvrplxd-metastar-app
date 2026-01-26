@@ -264,7 +264,6 @@ body {
 .status-toast.error { color: var(--danger); }
 
 /* --- 7. CORE UI STYLES (SIDEBAR & FAB) --- */
-/* (Kept exactly as requested - Main UI Unchanged) */
 #main-ui { position: relative; width: 100%; height: 100%; }
 #viewport { position: absolute; inset: 0; background: var(--bg-app); cursor: default; touch-action: none; overflow: hidden; }
 canvas { display: block; width: 100%; height: 100%; }
@@ -290,10 +289,13 @@ canvas { display: block; width: 100%; height: 100%; }
 .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #666; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
 .section-label svg { opacity: 0.7; width: 12px; height: 12px; stroke-width: 2.5; }
 .control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; min-height: 24px; }
-.control-row label { font-size: 13px; color: #ccc; font-weight: 500; }
+
+/* FIX: Fixed width for labels to align all sliders perfectly */
+.control-row label { font-size: 13px; color: #ccc; font-weight: 500; width: 60px; flex-shrink: 0; }
 .slider-group { display: flex; align-items: center; gap: 12px; flex: 1; margin-left: 12px; }
 
-input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 4px; cursor: pointer; }
+/* FIX: Added margin:0 and vertical-align to fix centering issues */
+input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 4px; cursor: pointer; margin: 0; padding: 0; vertical-align: middle; }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); cursor: grab; transition: transform 0.1s; margin-top: -6px; }
 input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 input[type=number] { width: 48px; background: #1a1a1a; border: 1px solid #333; color: #fff; font-size: 12px; padding: 6px; border-radius: var(--radius-sm); text-align: center; -moz-appearance: textfield; transition: all 0.2s; }
@@ -313,7 +315,8 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padd
 .sidebar-footer { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #666; line-height: 1.5; margin-top: 8px; }
 .version-pill { align-self: flex-start; display: inline-flex; padding: 4px 8px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 10px; font-weight: 700; }
 
-.fab-container { position: absolute; top: 24px; right: 24px; z-index: 50; }
+/* FIX: Increased z-index to 1001 to appear above sidebar/sheets */
+.fab-container { position: absolute; top: 24px; right: 24px; z-index: 1001; }
 .fab { width: 48px; height: 48px; background: var(--glass-panel); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 .fab:hover { transform: scale(1.05); background: rgba(255,255,255,0.1); }
 .export-menu { position: absolute; top: 60px; right: 0; width: 200px; background: #111; border: 1px solid #222; border-radius: var(--radius-md); padding: 8px; display: none; flex-direction: column; gap: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); z-index: 60; }
