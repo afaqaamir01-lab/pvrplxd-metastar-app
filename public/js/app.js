@@ -549,7 +549,19 @@ async function verifyOtp() {
         // Valid Login: Set the session flag so refreshed pages know we are active
         sessionStorage.setItem("ms_session_active", "true");
         
-        unlockApp();
+        // ⚡️ FIX: SHOW THE GREEN CARD BEFORE UNLOCKING
+        
+        // 1. Switch to the authenticated state (Green Card)
+        UI.switchState('state-authenticated', 'IDENTITY VERIFIED');
+        
+        // 2. Put the user's email inside the card
+        const cardEmail = document.getElementById('auth-card-email');
+        if(cardEmail) cardEmail.innerText = userEmail;
+        
+        // 3. Wait 2 seconds so the user can actually see it, THEN unlock
+        setTimeout(() => {
+            unlockApp();
+        }, 2000);
         
     } catch (e) { 
         UI.showStatus(e.message, true); 
