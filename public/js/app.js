@@ -1,11 +1,3 @@
-/**
- * METASTAR STUDIO PRO - Main Controller v5.0
- * - Terminal State Logic
- * - Kinetic UI Transitions
- * - exact Mobile Sheet Physics (Open/Mid/Closed)
- * - Core Engine Injection
- */
-
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
 const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
@@ -59,25 +51,22 @@ const els = {
 
 // --- UI CONTROLLER ---
 const UI = {
-    // 1. Entrance
+    // 1. Entrance Animation
     intro: () => {
         if(!msToken) {
-            if(els.coreLoader) els.coreLoader.classList.add('loaded'); // Lift black curtain
+            if(els.coreLoader) els.coreLoader.classList.add('loaded');
         }
-        // Terminal Pop-in
         gsap.set(".auth-container", { scale: 0.9, opacity: 0 }); 
         gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.2)", delay: 0.2 });
     },
 
-    // 2. Terminal State Switcher (Kinetic)
+    // 2. Terminal State Switcher
     switchState: (stateId, statusText = "PROCESSING...") => {
         const allStates = document.querySelectorAll('.auth-state');
         const target = document.getElementById(stateId);
         
-        // Update Status Text
         if(els.terminalStatus) els.terminalStatus.innerText = statusText;
 
-        // Hide all others
         allStates.forEach(el => {
             if(el !== target) {
                 el.classList.remove('active');
@@ -85,19 +74,16 @@ const UI = {
             }
         });
 
-        // Show Target
         if(target) {
             target.classList.remove('hidden');
             target.classList.add('active');
             
-            // Kinetic Height Animation
             gsap.to(els.authContainer, { 
                 height: "auto", 
                 duration: 0.4, 
                 ease: "power2.out" 
             });
             
-            // Fade In Content
             gsap.fromTo(target, 
                 { opacity: 0, y: 10 }, 
                 { opacity: 1, y: 0, duration: 0.3, clearProps: "all" }
@@ -128,9 +114,9 @@ const UI = {
         }
     },
 
-    // 4. TRANSITION TO APP
+    // 4. Transition to Main App
     prepareForCore: (onComplete) => {
-        if(els.coreLoader) els.coreLoader.classList.remove('loaded'); // Drop curtain
+        if(els.coreLoader) els.coreLoader.classList.remove('loaded'); 
         
         const tl = gsap.timeline({ onComplete });
         tl.to(els.authLayer, { opacity: 0, scale: 0.95, duration: 0.4 })
@@ -139,53 +125,20 @@ const UI = {
     },
 
     revealInterface: () => {
-        if(els.coreLoader) els.coreLoader.classList.add('loaded'); // Lift curtain
+        if(els.coreLoader) els.coreLoader.classList.add('loaded'); 
         
-        // Staggered Entrance
-        const tl = gsap.timeline();
-        
-        // FIX: Ensure FAB container is explicitly properly indexed before animating in
+        // Ensure FAB is above everything
         gsap.set(".fab-container", { zIndex: 1001 });
 
+        const tl = gsap.timeline();
         tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
           .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
           .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
-    // --- CORE PHYSICS (SLIDERS & DRAG) ---
-    initSliders: () => {
-        const ranges = document.querySelectorAll('input[type="range"]');
-        if(!ranges.length) return;
-        ranges.forEach(range => {
-            // These values now come from index.html (0-100), ensuring smoother calculation
-            const min = parseFloat(range.min), max = parseFloat(range.max);
-            const numInput = range.parentElement.querySelector('input[type="number"]');
-            
-            const updateUI = (val) => { 
-                range.value = val; 
-                if(numInput) numInput.value = Math.round(val); 
-                range.dispatchEvent(new Event('input')); 
-            };
-            
-            Draggable.create(document.createElement("div"), {
-                trigger: range, type: "x", inertia: true,
-                onPress: function(e) {
-                    const r = range.getBoundingClientRect();
-                    const val = min + ((e.clientX - r.left)/r.width) * (max - min);
-                    updateUI(Math.max(min, Math.min(max, val)));
-                    this.update();
-                },
-                onDrag: function() {
-                    const r = range.getBoundingClientRect();
-                    let val = parseFloat(range.value) + (this.deltaX / r.width) * (max - min);
-                    updateUI(Math.max(min, Math.min(max, val)));
-                }
-            });
-            if(numInput) numInput.addEventListener('input', () => updateUI(numInput.value));
-        });
-    },
-
+    // --- CORE PHYSICS (Mobile Sheet Drag ONLY) ---
+    // Note: Slider physics removed to fix jitter. Native range inputs are used instead.
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
@@ -253,8 +206,6 @@ async function initApp() {
             
             if (data.valid) {
                 userEmail = data.email || "User";
-                
-                // Show Resume State
                 UI.switchState('state-resume', 'RESTORING SESSION');
                 const emailEl = document.getElementById('resume-email');
                 if(emailEl) emailEl.innerText = userEmail;
@@ -290,7 +241,6 @@ function loadProtectedCore() {
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
-        // Slight delay to ensure script parses before revealing UI
         setTimeout(() => UI.revealInterface(), 400); 
     })
     .catch(e => {
@@ -307,8 +257,6 @@ async function checkLicense() {
     
     userEmail = email;
     setLoading(els.btnInit, true);
-    
-    // Switch to Scan
     UI.switchState('state-scanning', 'CONTACTING SERVER...');
     
     try {
@@ -330,12 +278,10 @@ async function checkLicense() {
             }
             throw new Error(data.message || "Unknown Error");
         }
-        
-        // Success
         UI.switchState('state-success', 'VERIFIED');
     } catch (e) { 
         UI.showStatus(e.message, true); 
-        UI.switchState('state-identity', 'SYSTEM READY'); // Go back
+        UI.switchState('state-identity', 'SYSTEM READY');
         UI.shakeError(); 
     } 
     finally { setLoading(els.btnInit, false); }
@@ -351,7 +297,6 @@ async function requestOtp(isResend = false) {
             body: JSON.stringify({ email: userEmail }) 
         });
         if (!res.ok) throw new Error("Could not send code");
-        
         if(!isResend) { 
             UI.switchState('state-otp', 'AWAITING CODE');
         }
@@ -404,7 +349,7 @@ function unlockApp() {
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
-        UI.initSliders(); 
+        // Logic check: initSliders() is intentionally removed here.
     }); 
 }
 
@@ -422,26 +367,22 @@ function setupOtpInteractions() {
 }
 
 function bindEvents() {
-    // Buttons
     if(els.btnInit) els.btnInit.onclick = checkLicense;
     if(els.btnSend) els.btnSend.onclick = () => requestOtp(false);
     if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
     if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
     
-    // Purchase / Support Actions
     if(els.btnBuy) els.btnBuy.onclick = () => window.open(PURCHASE_URL, '_blank');
     if(els.btnRenew) els.btnRenew.onclick = () => window.open(PURCHASE_URL, '_blank');
     if(els.btnRefresh) els.btnRefresh.onclick = checkLicense;
     if(els.btnContact) els.btnContact.onclick = () => window.location.href = `mailto:${CONTACT_EMAIL}`;
     
-    // Back Actions (Reset to Identity)
     document.querySelectorAll('.action-back').forEach(btn => {
         btn.onclick = () => UI.switchState('state-identity', 'SYSTEM READY');
     });
 
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
 
-    // Menu Interactions
     const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
     if(expBtn && expMenu) {
         document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
