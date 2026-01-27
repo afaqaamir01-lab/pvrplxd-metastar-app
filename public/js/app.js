@@ -378,6 +378,9 @@ let zoomState = { value: isMobileStart ? 15 : 60 };
 if(els.zoomVal) els.zoomVal.innerText = `${zoomState.value}%`;
 
 function handleZoom(delta) {
+    if (window.MetaStar && window.MetaStar.getZoom) {
+        zoomState.value = window.MetaStar.getZoom();
+    }
     let targetZoom = zoomState.value + delta;
     if (targetZoom < 5) targetZoom = 5;
     if (targetZoom > 400) targetZoom = 400;
