@@ -157,7 +157,7 @@ const UI = {
             const h = els.sidebar.offsetHeight;
             const closedY = h - 80; 
             const openY = 0; 
-            const midY = closedY * 0.45; 
+            const midY = closedY * 0.65; 
             return { openY, midY, closedY };
         };
 
