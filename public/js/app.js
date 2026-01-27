@@ -1,6 +1,6 @@
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastarpro/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
 
 // --- STATE ---
@@ -51,22 +51,24 @@ const els = {
 
 // --- UI CONTROLLER ---
 const UI = {
-    // 1. Entrance Animation
+    // 1. Entrance Animation (Updated for HeroUI Card)
     intro: () => {
         if(!msToken) {
             if(els.coreLoader) els.coreLoader.classList.add('loaded');
         }
-        gsap.set(".auth-container", { scale: 0.9, opacity: 0 }); 
-        gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.2)", delay: 0.2 });
+        // Subtle pop-in for the glass card
+        gsap.set(".auth-container", { scale: 0.95, opacity: 0, y: 10 }); 
+        gsap.to(".auth-container", { scale: 1, opacity: 1, y: 0, duration: 0.8, ease: "power3.out", delay: 0.2 });
     },
 
-    // 2. Terminal State Switcher
+    // 2. Terminal State Switcher (Cleaner Transition)
     switchState: (stateId, statusText = "PROCESSING...") => {
         const allStates = document.querySelectorAll('.auth-state');
         const target = document.getElementById(stateId);
         
         if(els.terminalStatus) els.terminalStatus.innerText = statusText;
 
+        // Hide current states
         allStates.forEach(el => {
             if(el !== target) {
                 el.classList.remove('active');
@@ -75,32 +77,39 @@ const UI = {
         });
 
         if(target) {
+            // Activate new state
             target.classList.remove('hidden');
             target.classList.add('active');
             
+            // Animate container height smoothly
             gsap.to(els.authContainer, { 
                 height: "auto", 
-                duration: 0.4, 
-                ease: "power2.out" 
+                duration: 0.5, 
+                ease: "power3.inOut" 
             });
             
+            // Fade in content
             gsap.fromTo(target, 
-                { opacity: 0, y: 10 }, 
-                { opacity: 1, y: 0, duration: 0.3, clearProps: "all" }
+                { opacity: 0, y: 5 }, 
+                { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", clearProps: "all" }
             );
         }
     },
 
     // 3. Error Feedback
     shakeError: () => {
-        gsap.fromTo(".auth-container", { x: -6 }, { x: 6, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
+        // Shakes the whole card
+        gsap.fromTo(".auth-container", { x: -4 }, { x: 4, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
     },
 
     showStatus: (msg, isErr) => {
         if(!els.statusMsg) return;
         els.statusMsg.innerText = msg;
+        // Toggle Tailwind classes for visibility and color
         els.statusMsg.classList.add('visible');
         els.statusMsg.classList.toggle('error', isErr);
+        els.statusMsg.classList.toggle('text-zinc-400', !isErr); // Default text color
+        
         setTimeout(() => els.statusMsg.classList.remove('visible'), 3500);
     },
 
@@ -110,7 +119,8 @@ const UI = {
             els.retryCounter.innerText = "";
         } else {
             els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
-            gsap.fromTo(els.retryCounter, { color: "#fff" }, { color: "#ff4444", duration: 0.5 });
+            // Pulse animation for urgency
+            gsap.fromTo(els.retryCounter, { opacity: 0.5 }, { opacity: 1, duration: 0.5, yoyo: true, repeat: 3 });
         }
     },
 
@@ -118,84 +128,39 @@ const UI = {
     prepareForCore: (onComplete) => {
         if(els.coreLoader) els.coreLoader.classList.remove('loaded'); 
         
+        // Scale down auth card and fade out
         const tl = gsap.timeline({ onComplete });
-        tl.to(els.authLayer, { opacity: 0, scale: 0.95, duration: 0.4 })
+        tl.to(els.authLayer, { opacity: 0, backdropFilter: "blur(0px)", duration: 0.5 })
           .set(els.authLayer, { display: "none" })
-          .set(els.mainUI, { visibility: "visible" });
+          .set(els.mainUI, { visibility: "visible", opacity: 1 });
     },
 
     revealInterface: () => {
         if(els.coreLoader) els.coreLoader.classList.add('loaded'); 
         
-        // Ensure FAB is above everything
         gsap.set(".fab-container", { zIndex: 1001 });
 
+        // HeroUI Entrance Sequence
         const tl = gsap.timeline();
-        tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
-          .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
+        tl.to("#main-ui", { opacity: 1, duration: 0.5 }) // Fade in main container
+          .from(els.sidebar, { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
+          .from(".control-row", { x: -10, opacity: 0, stagger: 0.02, duration: 0.5 }, "-=0.4")
           .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
-          .from("canvas", { opacity: 0, duration: 1 }, "-=1");
+          .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
     },
 
-    // --- 5. NEW VISUAL LOGIC FOR META SLIDERS ---
-    initSliders: () => {
-        const ranges = document.querySelectorAll('input[type="range"]');
-        
-        // Helper to update the gradient background
-        const updateVisuals = (rangeInput) => {
-            const min = parseFloat(rangeInput.min) || 0;
-            const max = parseFloat(rangeInput.max) || 100;
-            const val = parseFloat(rangeInput.value) || 0;
-            
-            // Calculate percentage
-            let percentage = ((val - min) / (max - min)) * 100;
-            percentage = Math.min(Math.max(percentage, 0), 100); // Clamp between 0-100
-
-            // Apply Linear Gradient: #717171 (Left) -> #1E1E1E (Right)
-            rangeInput.style.background = `linear-gradient(to right, #717171 0%, #717171 ${percentage}%, #1E1E1E ${percentage}%, #1E1E1E 100%)`;
-        };
-
-        ranges.forEach(range => {
-            // 1. Set Initial State
-            updateVisuals(range);
-
-            // 2. Listen for Drag Events
-            range.addEventListener('input', () => updateVisuals(range));
-
-            // 3. Listen for Sibling Number Updates (Two-way sync)
-            const siblingNum = range.parentElement.querySelector('input[type="number"]');
-            if(siblingNum) {
-                siblingNum.addEventListener('input', () => {
-                    // Slight delay allows the value to propagate if managed by core
-                    setTimeout(() => updateVisuals(range), 0);
-                });
-            }
-        });
-
-        // 4. Hook into Reset Button (to refresh visuals after reset)
-        const resetBtn = document.getElementById('btn-reset-settings');
-        if(resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                // Wait for the core engine to reset values, then update visuals
-                setTimeout(() => {
-                    ranges.forEach(r => updateVisuals(r));
-                }, 50); 
-            });
-        }
-    },
-
-    // --- CORE PHYSICS (Mobile Sheet Drag ONLY) ---
+    // --- CORE PHYSICS (Mobile Sheet Drag) ---
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
         if (!els.sidebar || !header || typeof Draggable === 'undefined') return;
 
+        // Calculate snap points based on the new Tailwind layout
         const getSnapPoints = () => {
             const h = els.sidebar.offsetHeight;
-            const closedY = h - 80; 
+            const closedY = h - 70; // Keep header visible
             const openY = 0; 
-            const midY = closedY * 0.45; 
-            return { openY, midY, closedY };
+            return { openY, closedY };
         };
 
         Draggable.create(els.sidebar, {
@@ -204,22 +169,17 @@ const UI = {
             inertia: true,
             edgeResistance: 0.65,
             dragClickables: false, 
-            bounds: { minY: 0, maxY: 1000 }, 
+            // Lock movement to vertical axis within logical bounds
+            bounds: { minY: 0, maxY: 600 }, 
             onPress: function() {
                 const { closedY } = getSnapPoints();
                 this.applyBounds({ minY: 0, maxY: closedY });
             },
-            snap: {
-                y: function(value) {
-                    const { openY, midY, closedY } = getSnapPoints();
-                    const distToOpen = Math.abs(value - openY);
-                    const distToMid = Math.abs(value - midY);
-                    const distToClosed = Math.abs(value - closedY);
-
-                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
-                    if (distToMid < distToClosed) return midY; 
-                    return closedY; 
-                }
+            onDragEnd: function() {
+                const { openY, closedY } = getSnapPoints();
+                // Simple snap logic: >50% goes to closest state
+                const dest = (Math.abs(this.y) > closedY / 2) ? closedY : openY;
+                gsap.to(this.target, { y: dest, duration: 0.5, ease: "power3.out" });
             }
         });
     }
@@ -232,14 +192,31 @@ function getAuthHeaders() {
     return headers;
 }
 
+// **UPDATED**: Loading State Toggle for Tailwind
 function setLoading(btn, load) { 
     if(!btn) return; 
-    btn.classList.toggle('loading', load); btn.disabled = load;
-    const l = btn.querySelector('.btn-loader'), t = btn.querySelector('span');
-    if(l) l.style.display = load?'block':'none'; if(t) t.style.opacity = load?'0':'1';
+    
+    // Toggle pointer events and style
+    btn.disabled = load;
+    btn.classList.toggle('cursor-not-allowed', load);
+    btn.classList.toggle('opacity-80', load);
+    
+    const l = btn.querySelector('.btn-loader');
+    const t = btn.querySelector('span'); // Button text span
+    
+    if(l) {
+        // Tailwind toggle: 'hidden' class
+        if(load) l.classList.remove('hidden'); 
+        else l.classList.add('hidden');
+    }
+    
+    if(t) {
+        // Fade text out slightly while loading
+        t.style.opacity = load ? '0' : '1';
+    }
 }
 
-// --- APP INIT FLOW ---
+// --- APP INIT FLOW (UNCHANGED LOGIC) ---
 async function initApp() {
     setupOtpInteractions();
     bindEvents();
@@ -296,7 +273,7 @@ function loadProtectedCore() {
     });
 }
 
-// --- AUTH LOGIC ---
+// --- AUTH LOGIC (UNCHANGED) ---
 async function checkLicense() {
     const email = els.emailInput.value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { UI.shakeError(); return UI.showStatus("Invalid email", true); }
@@ -386,28 +363,39 @@ function clearOtpInputs() { els.otpContainer.querySelectorAll('input').forEach(i
 
 function startResendTimer() {
     if(!els.btnResend) return;
-    let t = 60; els.btnResend.style.display = "none";
+    let t = 60; els.btnResend.classList.add("hidden"); // Tailwind Hidden
     if(resendTimer) clearInterval(resendTimer);
-    resendTimer = setInterval(() => { t--; if(t<=0) { clearInterval(resendTimer); els.btnResend.style.display = "block"; els.btnResend.innerText="Resend Code"; } }, 1000);
+    resendTimer = setInterval(() => { 
+        t--; 
+        if(t<=0) { 
+            clearInterval(resendTimer); 
+            els.btnResend.classList.remove("hidden"); // Tailwind Show
+            els.btnResend.innerText="Resend Code"; 
+        } 
+    }, 1000);
 }
 
 function unlockApp() { 
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
-        
-        // --- NEW SLIDER LOGIC INITIALIZATION ---
-        UI.initSliders(); 
     }); 
 }
 
 function setupOtpInteractions() {
     const inputs = els.otpContainer.querySelectorAll('input');
     inputs.forEach((input, i) => {
-        input.addEventListener('input', (e) => { if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus(); });
-        input.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus(); if (e.key === 'Enter') verifyOtp(); });
+        // Auto-focus next logic
+        input.addEventListener('input', (e) => { 
+            if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus(); 
+        });
+        input.addEventListener('keydown', (e) => { 
+            if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus(); 
+            if (e.key === 'Enter') verifyOtp(); 
+        });
         input.addEventListener('paste', (e) => {
-            e.preventDefault(); const d = e.clipboardData.getData('text').slice(0, 6).split('');
+            e.preventDefault(); 
+            const d = e.clipboardData.getData('text').slice(0, 6).split('');
             d.forEach((c, idx) => { if(inputs[idx]) inputs[idx].value = c; });
             if(d.length===6) verifyOtp();
         });
@@ -431,11 +419,32 @@ function bindEvents() {
 
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
 
+    // Export Menu Toggle
     const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
     if(expBtn && expMenu) {
-        document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
-        expBtn.onclick = e => { e.stopPropagation(); expMenu.style.display = expMenu.style.display==='flex'?'none':'flex'; };
-        expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
+        document.addEventListener('click', e => { 
+            if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) {
+                // Tailwind: add hidden, remove flex
+                expMenu.classList.add('hidden');
+                expMenu.classList.remove('flex');
+            } 
+        });
+        expBtn.onclick = e => { 
+            e.stopPropagation(); 
+            // Toggle visibility classes
+            if (expMenu.classList.contains('hidden')) {
+                expMenu.classList.remove('hidden');
+                expMenu.classList.add('flex');
+            } else {
+                expMenu.classList.add('hidden');
+                expMenu.classList.remove('flex');
+            }
+        };
+        expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { 
+            window.MetaStar?.export(b.dataset.fmt); 
+            expMenu.classList.add('hidden');
+            expMenu.classList.remove('flex');
+        });
     }
     const rst = document.getElementById('btn-reset-settings');
     if(rst) rst.onclick = () => window.MetaStar?.reset();
