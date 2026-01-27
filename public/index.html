@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#030303">
-    <meta name="description" content="MetaStar Studio Pro - Web-based Vector Manipulation Engine">
+    <meta name="description" content="MetaStar Studio Pro - 4-Point Star Engine">
     
     <title>MetaStar Studio Pro</title>
     
@@ -66,7 +66,7 @@
             </div>
 
             <div id="state-success" class="auth-state hidden">
-                <i class="ph-duotone ph-check-circle auth-hero-icon success"></i>
+                <i class="ph-duotone ph-seal-check auth-hero-icon success"></i>
                 
                 <div class="msg-header">LICENSE VERIFIED</div>
                 
@@ -85,7 +85,7 @@
             </div>
 
             <div id="state-purchase" class="auth-state hidden">
-                <i class="ph-duotone ph-warning-circle auth-hero-icon warning"></i>
+                <i class="ph-duotone ph-seeal-warning auth-hero-icon warning"></i>
                 
                 <div class="msg-header warning">NO SUBSCRIPTION FOUND</div>
                 <div class="msg-sub">Access to MetaStar requires an active license.</div>
@@ -185,7 +185,7 @@
 
             <div class="tool-group export-wrapper">
                 <button class="tool-btn pill-btn" id="btn-export-trigger">
-                    <i class="ph-bold ph-download-simple"></i>
+                    <i class="ph-bold ph-export"></i>
                 </button>
                 
                 <div class="export-menu" id="export-menu">
@@ -209,9 +209,8 @@
             <div id="sheet-handle"></div>
             
             <div class="sidebar-header" id="mobile-drag-trigger">
-                <svg class="brand-logo" viewBox="0 0 696 94" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg class="brand-logo" viewBox="0 0 205 94" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M75.372 0C75.372 32.5424 103.966 28.0335 205 24.7703C91.0622 42.1206 64.6674 44.072 41.3519 93C49.8812 63.0303 35.1342 43.102 0 44.4084C36.142 40.185 64.7519 25.4546 75.372 0Z" fill="#DFFF00"/>
-                    <path d="M266.03 68.5V23.7H281.71L289.454 62.74H290.606L298.35 23.7H314.03V68.5H305.838V29.908H304.686L297.006 68.5H283.054L275.374 29.908H274.222V68.5H266.03ZM322.467 68.5V23.7H351.267V31.38H330.915V42.068H349.475V49.748H330.915V60.82H351.651V68.5H322.467ZM368.273 68.5V31.38H355.217V23.7H389.777V31.38H376.721V68.5H368.273ZM388.333 68.5L400.109 23.7H414.829L426.605 68.5H417.901L415.469 58.644H399.469L397.037 68.5H388.333ZM401.453 50.836H413.485L408.045 29.012H406.893L401.453 50.836ZM447.519 69.396C444.063 69.396 441.012 68.7773 438.367 67.54C435.722 66.3027 433.652 64.532 432.159 62.228C430.666 59.924 429.919 57.1507 429.919 53.908V52.116H438.239V53.908C438.239 56.596 439.071 58.6227 440.735 59.988C442.399 61.3107 444.66 61.972 447.519 61.972C450.42 61.972 452.575 61.396 453.983 60.244C455.434 59.092 456.159 57.62 456.159 55.828C456.159 54.5907 455.796 53.588 455.071 52.82C454.388 52.052 453.364 51.4333 451.999 50.964C450.676 50.452 449.055 49.9827 447.135 49.556L445.663 49.236C442.591 48.5533 439.946 47.7 437.727 46.676C435.551 45.6093 433.866 44.2227 432.671 42.516C431.519 40.8093 430.943 38.5907 430.943 35.86C430.943 33.1293 431.583 30.804 432.863 28.884C434.186 26.9213 436.02 25.428 438.367 24.404C440.756 23.3373 443.551 22.804 446.751 22.804C449.951 22.804 452.788 23.3587 455.263 24.468C457.78 25.5347 459.743 27.156 461.151 29.332C462.602 31.4653 463.327 34.1533 463.327 37.396V39.316H455.007V37.396C455.007 35.6893 454.666 34.324 453.983 33.3C453.343 32.2333 452.404 31.4653 451.167 30.996C449.93 30.484 448.458 30.228 446.751 30.228C444.191 30.228 442.292 30.7187 441.055 31.7C439.86 32.6387 439.263 33.94 439.263 35.604C439.263 36.7133 439.54 37.652 440.095 38.42C440.692 39.188 441.567 39.828 442.719 40.34C443.871 40.852 445.343 41.3 447.135 41.684L448.607 42.004C451.807 42.6867 454.58 43.5613 456.927 44.628C459.316 45.6947 461.172 47.1027 462.495 48.852C463.818 50.6013 464.479 52.8413 464.479 55.572C464.479 58.3027 463.775 60.7133 462.367 62.804C461.002 64.852 459.039 66.4733 456.479 67.668C453.962 68.82 450.975 69.396 447.519 69.396ZM479.71 68.5V31.38H466.654V23.7H501.214V31.38H488.158V68.5H479.71ZM499.77 68.5L511.546 23.7H526.266L538.042 68.5H529.338L526.906 58.644H510.906L508.474 68.5H499.77ZM512.89 50.836H524.922L519.482 29.012H518.33L512.89 50.836ZM543.405 68.5V23.7H562.861C565.677 23.7 568.13 24.1907 570.221 25.172C572.311 26.1533 573.933 27.54 575.085 29.332C576.237 31.124 576.813 33.236 576.813 35.668V36.436C576.813 39.124 576.173 41.3 574.893 42.964C573.613 44.628 572.034 45.844 570.157 46.612V47.764C571.863 47.8493 573.186 48.4467 574.125 49.556C575.063 50.6227 575.533 52.052 575.533 53.844V68.5H567.085V55.06C567.085 54.036 566.807 53.204 566.253 52.564C565.741 51.924 564.866 51.604 563.629 51.604H551.853V68.5H543.405ZM551.853 43.924H561.965C563.97 43.924 565.527 43.3907 566.637 42.324C567.789 41.2147 568.365 39.764 568.365 37.972V37.332C568.365 35.54 567.81 34.1107 566.701 33.044C565.591 31.9347 564.013 31.38 561.965 31.38H551.853V43.924Z" fill="white"/>
                 </svg>
                 <div class="header-tools">
                     <button class="icon-btn" id="btn-reset-settings" title="Reset All">
@@ -224,7 +223,7 @@
                 
                 <div class="control-section">
                     <div class="section-label">
-                        <i class="ph-duotone ph-polygon"></i> Geometry
+                        <i class="ph-bold ph-faders-horizontal"></i> Geometry
                     </div>
                     <div class="control-row">
                         <label>Top</label>
@@ -259,7 +258,7 @@
 
                 <div class="control-section">
                     <div class="section-label">
-                        <i class="ph-duotone ph-arrows-out-cardinal"></i> Transform
+                        <i class="ph-bold ph-cube"></i> Transform
                     </div>
                     <div class="control-row">
                         <label>Skew X</label>
@@ -288,7 +287,7 @@
 
                 <div class="control-section">
                     <div class="section-label">
-                        <i class="ph-duotone ph-eye"></i> View
+                        <i class="ph-bold ph-layout"></i> View
                     </div>
                     
                     <div class="control-row">
@@ -320,7 +319,7 @@
                 
                 <div class="sidebar-footer">
                     <div>Forged by a designer, for the visionaries. A dedicated instrument for instant star creation.</div>
-                    <div class="version-pill">v1.0 PRO</div>
+                    <div class="version-pill">v1.0 Pro</div>
                 </div>
             </div>
         </aside>
