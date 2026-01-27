@@ -1,13 +1,12 @@
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastarpro/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
 
 // --- STATE ---
 let userEmail = "";
 let resendTimer = null;
 let msToken = localStorage.getItem("ms_token"); 
-let currentZoom = 100; // Track UI zoom level
 
 // --- DOM CACHE ---
 const els = {
@@ -337,23 +336,26 @@ function initControls() {
 
 // --- WORKSPACE TOOLS ---
 
-// 1. Create a proxy object for GSAP to animate
-let zoomState = { value: 100 }; 
+// FIX: Initialize with correct Responsive Zoom (15% Mobile, 60% Desktop)
+const isMobileStart = window.innerWidth < 768;
+let zoomState = { value: isMobileStart ? 15 : 60 }; 
+
+// FIX: Update UI immediately so it doesn't show 100% on load
+if(els.zoomVal) els.zoomVal.innerText = `${zoomState.value}%`;
 
 function handleZoom(delta) {
-    // 2. Calculate the target based on the current ANIMATED value, not just the last target
-    // This ensures smooth interruption if the user clicks rapidly
+    // 2. Calculate the target based on the current ANIMATED value
     let targetZoom = zoomState.value + delta;
     
-    // 3. Clamp values (10% to 400%)
-    if (targetZoom < 10) targetZoom = 10;
+    // 3. Clamp values (5% to 400%) - Updated min to 5% to support 15% default
+    if (targetZoom < 5) targetZoom = 5;
     if (targetZoom > 400) targetZoom = 400;
     
     // 4. Smooth Animation (The Morph Effect)
     gsap.to(zoomState, {
         value: targetZoom,
-        duration: 0.5,        // Slower duration = smoother feel
-        ease: "power2.out",   // Soft deceleration
+        duration: 0.5,        
+        ease: "power2.out",   
         onUpdate: () => {
             const current = Math.round(zoomState.value);
             
@@ -522,8 +524,15 @@ function bindEvents() {
 
     // Sidebar Reset
     if(els.btnReset) els.btnReset.onclick = () => {
+        // Trigger Engine Reset
         window.MetaStar?.reset?.();
-        // Reset local UI inputs if needed, or rely on core to call back
+        
+        // FIX: Sync Local Zoom State to the same responsive defaults
+        const isMobileReset = window.innerWidth < 768;
+        zoomState.value = isMobileReset ? 15 : 60;
+        
+        // Note: The UI text (els.zoomVal) will be updated by the engine's 
+        // onUpdate callback, so we don't need to force it here.
     };
 }
 
