@@ -1,12 +1,13 @@
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastarpro/"; 
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
 
 // --- STATE ---
 let userEmail = "";
 let resendTimer = null;
 let msToken = localStorage.getItem("ms_token"); 
+let currentZoom = 100; // Track UI zoom level
 
 // --- DOM CACHE ---
 const els = {
@@ -24,11 +25,11 @@ const els = {
     stateOtp: document.getElementById('state-otp'),
     stateResume: document.getElementById('state-resume'),
 
-    // Inputs
+    // Auth Inputs
     emailInput: document.getElementById('email-input'),
     otpContainer: document.getElementById('otp-container'),
 
-    // Buttons
+    // Auth Buttons
     btnInit: document.getElementById('btn-init'),
     btnSend: document.getElementById('btn-send-otp'),
     btnVerify: document.getElementById('btn-verify'),
@@ -46,7 +47,14 @@ const els = {
     coreLoader: document.getElementById('core-loader'),
     mainUI: document.getElementById('main-ui'),
     sidebar: document.getElementById('sidebar'),
-    zoomVal: document.getElementById('zoomBadge')
+    
+    // Workspace Tools
+    zoomVal: document.getElementById('zoom-val'),
+    btnZoomInc: document.getElementById('btn-zoom-inc'),
+    btnZoomDec: document.getElementById('btn-zoom-dec'),
+    btnExport: document.getElementById('btn-export-trigger'),
+    exportMenu: document.getElementById('export-menu'),
+    btnReset: document.getElementById('btn-reset-settings')
 };
 
 // --- UI CONTROLLER ---
@@ -78,6 +86,7 @@ const UI = {
             target.classList.remove('hidden');
             target.classList.add('active');
             
+            // Animate height adjustment smoothly
             gsap.to(els.authContainer, { 
                 height: "auto", 
                 duration: 0.4, 
@@ -127,18 +136,17 @@ const UI = {
     revealInterface: () => {
         if(els.coreLoader) els.coreLoader.classList.add('loaded'); 
         
-        // Ensure FAB is above everything
-        gsap.set(".fab-container", { zIndex: 1001 });
+        // Ensure Header is visible
+        gsap.set("#workspace-header", { zIndex: 500 });
 
         const tl = gsap.timeline();
         tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
+          .from("#workspace-header", { y: -20, opacity: 0, duration: 0.6, ease: "power2.out" }, "-=0.6")
           .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
-          .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
     // --- CORE PHYSICS (Mobile Sheet Drag ONLY) ---
-    // Note: Slider physics removed to fix jitter. Native range inputs are used instead.
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
@@ -230,7 +238,7 @@ async function initApp() {
     UI.switchState('state-identity', 'SYSTEM READY');
 }
 
-// --- CORE LOADING ---
+// --- CORE LOADING & CONTROLS ---
 function loadProtectedCore() {
     fetch(`${API_URL}/core.js`, { headers: getAuthHeaders() })
     .then(res => {
@@ -241,12 +249,120 @@ function loadProtectedCore() {
         const script = document.createElement('script');
         script.textContent = scriptContent;
         document.body.appendChild(script);
-        setTimeout(() => UI.revealInterface(), 400); 
+        
+        // Initialize Controls after core is loaded
+        setTimeout(() => {
+            initControls();
+            UI.revealInterface();
+        }, 400); 
     })
     .catch(e => {
         UI.showStatus("Session Expired. Reloading...", true);
         localStorage.removeItem("ms_token");
         setTimeout(() => window.location.reload(), 2000);
+    });
+}
+
+// *** NEW: CONTROL BINDINGS (FIGMA STYLE) ***
+function initControls() {
+    // Helper to sync Range Slider <-> Number Input
+    const sync = (rangeId, numId, param) => {
+        const r = document.getElementById(rangeId);
+        const n = document.getElementById(numId);
+        
+        if (!r || !n) return;
+
+        // Set initial values (defaults)
+        if(!r.value) r.value = 0;
+        n.value = r.value;
+
+        // Listener: Slider updates Number & Core
+        r.addEventListener('input', () => {
+            n.value = r.value;
+            window.MetaStar?.update?.(param, parseFloat(r.value));
+        });
+
+        // Listener: Number updates Slider & Core
+        n.addEventListener('input', () => {
+            // Clamp value to slider bounds
+            let val = parseFloat(n.value);
+            const min = parseFloat(r.min);
+            const max = parseFloat(r.max);
+            
+            if (!isNaN(val)) {
+                if(val < min) val = min;
+                if(val > max) val = max;
+                r.value = val;
+                window.MetaStar?.update?.(param, val);
+            }
+        });
+
+        // Blur on Enter
+        n.addEventListener('keydown', (e) => {
+            if(e.key === 'Enter') n.blur();
+        });
+    };
+
+    // Bind Geometry
+    sync('r-t', 'n-t', 'top');
+    sync('r-r', 'n-r', 'right');
+    sync('r-b', 'n-b', 'bottom');
+    sync('r-l', 'n-l', 'left');
+
+    // Bind Transform
+    sync('r-sx', 'n-sx', 'skewX');
+    sync('r-sy', 'n-sy', 'skewY');
+    sync('r-c', 'n-c',  'curve');
+
+    // Bind Colors
+    const bindColor = (id, param) => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('input', (e) => {
+            window.MetaStar?.update?.(param, e.target.value);
+        });
+    };
+    bindColor('starCol', 'fill');
+    bindColor('bgCol', 'bg');
+
+    // Bind Toggles
+    const bindToggle = (id, param) => {
+        const el = document.getElementById(id);
+        if(el) el.addEventListener('change', (e) => {
+            window.MetaStar?.update?.(param, e.target.checked);
+        });
+    };
+    bindToggle('checkGrid', 'showGrid');
+    bindToggle('checkBones', 'showBones');
+}
+
+// --- WORKSPACE TOOLS ---
+
+// 1. Create a proxy object for GSAP to animate
+let zoomState = { value: 100 }; 
+
+function handleZoom(delta) {
+    // 2. Calculate the target based on the current ANIMATED value, not just the last target
+    // This ensures smooth interruption if the user clicks rapidly
+    let targetZoom = zoomState.value + delta;
+    
+    // 3. Clamp values (10% to 400%)
+    if (targetZoom < 10) targetZoom = 10;
+    if (targetZoom > 400) targetZoom = 400;
+    
+    // 4. Smooth Animation (The Morph Effect)
+    gsap.to(zoomState, {
+        value: targetZoom,
+        duration: 0.5,        // Slower duration = smoother feel
+        ease: "power2.out",   // Soft deceleration
+        onUpdate: () => {
+            const current = Math.round(zoomState.value);
+            
+            // Update UI Text
+            if (els.zoomVal) els.zoomVal.innerText = `${current}%`;
+            
+            // Update Engine (Normalized 1.0 = 100%)
+            window.MetaStar?.setZoom?.(zoomState.value / 100);
+        }
     });
 }
 
@@ -349,7 +465,6 @@ function unlockApp() {
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
-        // Logic check: initSliders() is intentionally removed here.
     }); 
 }
 
@@ -367,11 +482,13 @@ function setupOtpInteractions() {
 }
 
 function bindEvents() {
+    // Auth
     if(els.btnInit) els.btnInit.onclick = checkLicense;
     if(els.btnSend) els.btnSend.onclick = () => requestOtp(false);
     if(els.btnVerify) els.btnVerify.onclick = verifyOtp;
     if(els.btnResend) els.btnResend.onclick = () => requestOtp(true);
     
+    // External
     if(els.btnBuy) els.btnBuy.onclick = () => window.open(PURCHASE_URL, '_blank');
     if(els.btnRenew) els.btnRenew.onclick = () => window.open(PURCHASE_URL, '_blank');
     if(els.btnRefresh) els.btnRefresh.onclick = checkLicense;
@@ -383,14 +500,31 @@ function bindEvents() {
 
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
 
-    const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
-    if(expBtn && expMenu) {
-        document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
-        expBtn.onclick = e => { e.stopPropagation(); expMenu.style.display = expMenu.style.display==='flex'?'none':'flex'; };
-        expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
+    // Header Tools (Export & Zoom)
+    if(els.btnExport && els.exportMenu) {
+        document.addEventListener('click', e => { 
+            if(!els.btnExport.contains(e.target) && !els.exportMenu.contains(e.target)) {
+                els.exportMenu.style.display = 'none'; 
+            }
+        });
+        els.btnExport.onclick = e => { 
+            e.stopPropagation(); 
+            els.exportMenu.style.display = els.exportMenu.style.display === 'flex' ? 'none' : 'flex'; 
+        };
+        els.exportMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { 
+            window.MetaStar?.export(b.dataset.fmt); 
+            els.exportMenu.style.display = 'none'; 
+        });
     }
-    const rst = document.getElementById('btn-reset-settings');
-    if(rst) rst.onclick = () => window.MetaStar?.reset();
+
+    if(els.btnZoomInc) els.btnZoomInc.onclick = () => handleZoom(20);
+    if(els.btnZoomDec) els.btnZoomDec.onclick = () => handleZoom(-20);
+
+    // Sidebar Reset
+    if(els.btnReset) els.btnReset.onclick = () => {
+        window.MetaStar?.reset?.();
+        // Reset local UI inputs if needed, or rely on core to call back
+    };
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
