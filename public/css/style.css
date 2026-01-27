@@ -607,7 +607,7 @@ canvas { display: block; width: 100%; height: 100%; }
 
 /* New Credit Badge Styling */
 .credit-badge { 
-    position: absolute; bottom: 32px; right: 32px; z-index: 90; 
+    position: fixed; bottom: 32px; right: 32px; z-index: 90; 
     
     /* White Container */
     background: #ffffff; 
@@ -624,7 +624,8 @@ canvas { display: block; width: 100%; height: 100%; }
     
     text-decoration: none; 
     box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
-    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s; 
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s, opacity 0.3s; 
+    opacity: 1;
 }
 
 .credit-badge:hover { 
@@ -653,6 +654,13 @@ canvas { display: block; width: 100%; height: 100%; }
 .badge-text {
     font-size: 12px; 
     font-weight: 800; 
+}
+
+/* --- THE VANISHED STATE --- */
+.credit-badge.vanished {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    pointer-events: none;
 }
 
 /* --- 9. RESPONSIVE DESIGN --- */
@@ -706,8 +714,23 @@ canvas { display: block; width: 100%; height: 100%; }
     }
     .sidebar-header:active #sheet-handle { background: var(--accent); }
     
-    .credit-badge { display: none; } 
-}
+    .credit-badge { 
+        display: flex; /* Force it to show */
+        bottom: 90px; /* Position above the collapsed sidebar */
+        right: 20px;
+        transform-origin: bottom right;
+        transform: scale(0.8); /* Slightly smaller on mobile */
+    }
+    .credit-badge:hover {
+        transform: translateY(-3px) scale(0.8); /* Keeps it small on hover */
+    }
+    credit-badge.vanished {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8); 
+        pointer-events: none;
+    }
+
+    }
 
 /* Core Loader (Black Curtain) */
 #core-loader { 
