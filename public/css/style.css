@@ -280,9 +280,9 @@ button { font-family: var(--font-ui); }
 
 /* Zoom Controls */
 .zoom-group {
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(10px);
-    border-radius: 14px; /* CHANGED: Squary Roundy */
+    background: #000000;
+    border-radius: 14px; 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
     border: 1px solid var(--glass-border);
     padding: 4px;
 }
@@ -309,22 +309,17 @@ button { font-family: var(--font-ui); }
 .pill-btn {
     display: flex; align-items: center; gap: 8px;
     height: 40px; padding: 0 20px;
-    
-    /* Glass Style */
-    background: rgba(0,0,0,0.6); 
-    backdrop-filter: blur(10px);
+    background: #000000; 
     border: 1px solid var(--glass-border);
-    color: #fff; /* White text instead of black */
-    
-    /* Shape */
-    border-radius: 12px; /* Squary Roundy */
-    
+    color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
     transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .pill-btn:hover {
-    background: rgba(255,255,255,0.1); /* Subtle lighten on hover */
-    border-color: rgba(255,255,255,0.2);
+    background: rgb(20, 20, 20); 
+    border-color: rgb(20, 20, 20);
     transform: translateY(-2px);
 }
 
@@ -389,7 +384,7 @@ canvas { display: block; width: 100%; height: 100%; }
     background: #050505; 
     backdrop-filter: blur(50px); -webkit-backdrop-filter: blur(50px);
     border: 1px solid var(--glass-border); 
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 24px 60px rgba(0,0,0,0.5);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 24px 60px rgba(0,0,0,0.15);
     border-radius: var(--radius-lg); 
     display: flex; flex-direction: column; z-index: 100;
 }
@@ -527,10 +522,25 @@ canvas { display: block; width: 100%; height: 100%; }
     font-size: 11px; color: #666; line-height: 1.5; margin-top: 8px; 
 }
 .version-pill { 
-    align-self: flex-start; display: inline-flex; 
-    padding: 4px 8px; background: #111; 
-    border: 1px solid #333; border-radius: 6px; 
-    color: #fff; font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+    align-self: flex-start; 
+    display: inline-flex; 
+    padding: 4px 8px; 
+    
+    /* Background remains dark for contrast */
+    background: rgba(223, 255, 0, 0.1); /* Low opacity acid background */
+    
+    /* Border and Text use the Acid Accent */
+    border: 0.5px solid var(--accent); 
+    color: var(--accent); 
+    
+    font-size: 10px; 
+    font-weight: 700; 
+    font-family: var(--font-mono); /* Optional: ensures mono font like before */
+    border-radius: 6px;
+    letter-spacing: 1px;
+    
+    /* Optional: Add a subtle glow */
+    box-shadow: 0 0 10px rgba(223, 255, 0, 0.1);
 }
 
 /* New Credit Badge Styling */
@@ -551,7 +561,7 @@ canvas { display: block; width: 100%; height: 100%; }
     border-radius: 14px; 
     
     text-decoration: none; 
-    box-shadow: 0 5px 20px rgba(0,0,0,0.6); 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
     transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s; 
 }
 
@@ -593,12 +603,26 @@ canvas { display: block; width: 100%; height: 100%; }
 }
 
 @media (max-width: 768px) {
-    :root { --sidebar-width: 100%; --sidebar-margin: 0; }
-    
-    #workspace-header {
-        top: 20px; left: 20px; right: 20px;
-        justify-content: space-between;
+    /* 1. Target the Container holding Zoom & Export */
+    /* (Assuming class is .workspace-footer or #workspace-header - verify your HTML) */
+    .workspace-tools, #bottom-bar { 
+        /* Move lower: 10px spacing + Apple's Home Indicator Area */
+        bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+        
+        /* 2. Reduce the "Thickness" (Height) of the bar */
+        padding: 6px 12px !important; 
+        gap: 8px;
     }
+
+    /* 3. Make the Buttons/Indicators slightly smaller for Mobile */
+    .pill-btn, .zoom-group {
+        height: 36px !important; /* Reduced from 40px */
+        font-size: 12px !important;
+    }
+    
+    /* Adjust icon sizes inside buttons if needed */
+    .pill-btn i { font-size: 14px; }
+}
     
     .zoom-group { background: #111; border-color: #333; }
 
@@ -624,7 +648,7 @@ canvas { display: block; width: 100%; height: 100%; }
     .sidebar-header:active #sheet-handle { background: var(--accent); }
     
     .credit-badge { display: none; } 
-}
+
 
 /* Core Loader (Black Curtain) */
 #core-loader { 
