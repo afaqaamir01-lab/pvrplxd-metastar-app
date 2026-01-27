@@ -1,140 +1,356 @@
-/* --- METASTAR STUDIO PRO: SPECIALIST STYLES --- */
-/* This file complements the Tailwind configuration in index.html */
-
-/* 1. CONFIGURATION */
+/* --- 1. CONFIGURATION & VARIABLES --- */
 :root {
-    /* Kept for reference and specific JS interactions if needed */
+    /* Colors */
+    --bg-app: #030303;
+    
+    /* Obsidian Glass */
+    --glass-panel: #0a0a0a; 
+    --glass-border: #1f1f1f;
+    --glass-highlight: rgba(255, 255, 255, 0.08);
+    
+    /* Acid Industrial Accent */
     --accent: #dfff00;
+    --accent-hover: #eaff33;
+    --accent-dim: rgba(223, 255, 0, 0.05);
+    
+    /* Semantic Colors */
+    --text-main: #ffffff;
+    --text-muted: #888888;
+    --danger: #ff4444;
+    --warning: #ffcc00;
+    --success: #00ff88;
+
+    /* Dimensions */
+    --sidebar-width: 280px;
+    --sidebar-margin: 24px;
+    
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    
+    /* Animation */
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* 2. GLOBAL UTILITIES */
-/* Custom Scrollbar Hiding (Sleek Look) */
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.sidebar-content {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
+/* Global Reset */
+* { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
 
-/* 3. HERO SLIDER (CUSTOM RANGE INPUT) */
-/* Tailwind cannot easily style the "thumb" (knob) of a slider, so we do it here */
-
-/* The Track */
-.hero-slider::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 4px;
-    cursor: pointer;
-    background: #3f3f46; /* Matches Tailwind zinc-700 */
-    border-radius: 9999px;
+body {
+    margin: 0;
+    background: var(--bg-app);
+    color: var(--text-main);
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    height: 100dvh; 
+    overflow: hidden;
+    user-select: none;
+    background-image: radial-gradient(circle at 50% 30%, #111 0%, #000 100%);
 }
 
-/* The Thumb (Knob) */
-.hero-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    height: 16px;
-    width: 16px;
-    border-radius: 50%;
-    background: #ffffff;
-    cursor: grab;
-    margin-top: -6px; /* Centers thumb on the 4px track */
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    transition: transform 0.1s ease, background-color 0.2s;
+/* --- 2. AUTH TERMINAL OVERLAY --- */
+.overlay { 
+    position: fixed; inset: 0; 
+    z-index: 9999; 
+    background: #000; 
+    display: flex; align-items: center; justify-content: center; 
+    padding: 20px; 
 }
 
-/* Thumb Hover State */
-.hero-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    background: var(--accent); /* Acid Lime */
+/* THE TERMINAL CONTAINER */
+.auth-container { 
+    width: 100%; 
+    max-width: 360px; /* Tight & Focused */
+    background: var(--glass-panel); 
+    border: 1px solid var(--glass-border); 
+    border-radius: var(--radius-lg); 
+    box-shadow: 0 40px 100px rgba(0,0,0,0.9);
+    
+    /* Layout Logic */
+    display: flex; 
+    flex-direction: column;
+    padding: 32px 28px;
+    position: relative; 
+    overflow: hidden;
+    
+    /* Smooth Resize Animation */
+    height: auto;
+    transition: height 0.3s var(--ease-out);
 }
 
-/* Thumb Active State */
-.hero-slider:active::-webkit-slider-thumb {
-    cursor: grabbing;
-    transform: scale(0.95);
+/* Header Section */
+.auth-header { 
+    text-align: center; 
+    margin-bottom: 24px; 
+    flex-shrink: 0;
+}
+.logo-text { 
+    font-size: 20px; 
+    font-weight: 700; 
+    letter-spacing: 3px; 
+    color: #fff; 
+    margin-bottom: 6px; 
+}
+.terminal-status { 
+    color: var(--text-muted); 
+    font-size: 10px; 
+    font-family: monospace; 
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.7;
 }
 
-/* Firefox Support for Sliders */
-.hero-slider::-moz-range-track {
-    width: 100%;
-    height: 4px;
-    cursor: pointer;
-    background: #3f3f46;
-    border-radius: 9999px;
-}
-.hero-slider::-moz-range-thumb {
-    height: 16px;
-    width: 16px;
-    border: none;
-    border-radius: 50%;
-    background: #ffffff;
-    cursor: grab;
-    transition: transform 0.1s ease;
-}
-
-/* 4. AUTH & LOGIC STATES (CRITICAL FOR APP.JS) */
-/* These classes are toggled by your app.js logic */
-
+/* --- 3. STATE MANAGEMENT --- */
+/* By default, states are hidden. Active state is flex-column */
 .auth-state {
-    display: none; /* Hidden by default */
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    animation: fadeIn 0.3s ease-out;
 }
-
-/* Forces the element to show when JS adds the 'active' class */
 .auth-state.active {
-    display: flex !important;
+    display: flex;
 }
-
-/* Forces the element to hide when JS adds the 'hidden' class */
 .auth-state.hidden {
     display: none !important;
 }
 
-/* 5. ANIMATIONS & MICRO-INTERACTIONS */
-
-/* Status Toast (Bottom Notification) */
-.status-toast {
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    z-index: 50;
-}
-.status-toast.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.status-toast.error {
-    color: #f31260; /* HeroUI Danger Red */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Scanning Animation (Used in Auth) */
-@keyframes scan {
-    0% { left: -30%; }
-    100% { left: 100%; }
+/* --- 4. INPUTS & BUTTONS --- */
+.input-wrapper { position: relative; margin-bottom: 16px; width: 100%; }
+
+.modern-input { 
+    width: 100%; 
+    background: #0f0f0f; 
+    border: 1px solid #2a2a2a; 
+    padding: 14px 14px 14px 44px; 
+    border-radius: var(--radius-md); 
+    color: #fff; font-size: 14px; font-family: inherit; 
+    transition: all 0.2s ease; 
+}
+.modern-input:focus { 
+    border-color: #555; 
+    background: #000; 
+}
+.modern-input::placeholder { color: #444; }
+
+.input-icon { 
+    position: absolute; left: 16px; top: 50%; 
+    transform: translateY(-50%); 
+    color: #444; 
+    pointer-events: none; 
+    transition: color 0.2s; 
+}
+.modern-input:focus + .input-icon { color: #fff; }
+
+.primary-btn { 
+    width: 100%; padding: 14px; 
+    background: var(--accent); color: #000; 
+    border: none; border-radius: var(--radius-md); 
+    font-weight: 700; font-size: 13px; 
+    letter-spacing: 0.5px; text-transform: uppercase;
+    cursor: pointer; 
+    transition: transform 0.1s ease, background-color 0.2s ease;
+    display: flex; justify-content: center; align-items: center; 
+    position: relative; overflow: hidden;
+    margin-top: 8px;
+}
+.primary-btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+.primary-btn:active { transform: scale(0.98); }
+
+/* Special Button Variants */
+.btn-purchase {
+    background: #fff; color: #000; /* High Contrast */
+}
+.btn-purchase:hover { background: #eee; }
+
+.btn-loader { 
+    display: none; 
+    width: 16px; height: 16px; 
+    border: 2px solid rgba(0,0,0,0.1); 
+    border-top-color: #000; 
+    border-radius: 50%; 
+    animation: spin 0.8s linear infinite; 
+    position: absolute; 
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Text Links */
+.text-link { 
+    background: none; border: none; padding: 0;
+    color: var(--text-muted); font-size: 11px; 
+    cursor: pointer; transition: color 0.2s; 
+    text-decoration: underline; text-decoration-color: transparent;
+}
+.text-link:hover { color: #fff; text-decoration-color: #555; }
+
+.footer-row {
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+    margin-top: 16px;
+}
+.sep { font-size: 10px; color: #333; }
+
+/* --- 5. STATE VISUALS (ICONS & MESSAGES) --- */
+.icon-stage { 
+    width: 56px; height: 56px; 
+    border-radius: 50%; 
+    margin: 0 auto 16px auto;
+    display: flex; align-items: center; justify-content: center; 
+    background: #111; border: 1px solid #222;
+}
+.icon-stage.success { color: var(--success); border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+.icon-stage.warning { color: var(--warning); border-color: rgba(255,204,0,0.3); background: rgba(255,204,0,0.05); }
+.icon-stage.danger { color: var(--danger); border-color: rgba(255,68,68,0.3); background: rgba(255,68,68,0.05); }
+
+.msg-header { 
+    font-size: 14px; font-weight: 700; color: #fff; 
+    text-align: center; margin-bottom: 4px; letter-spacing: 0.5px;
+}
+.msg-header.warning { color: var(--warning); }
+.msg-header.danger { color: var(--danger); }
+
+.msg-sub {
+    font-size: 12px; color: #888; text-align: center; margin-bottom: 20px; line-height: 1.4;
 }
 
-/* Core Loader (The Black Curtain) */
-#core-loader {
-    transition: opacity 0.8s ease-in-out, visibility 0.8s;
+.license-badge {
+    background: #111; border: 1px solid #222;
+    padding: 12px; border-radius: var(--radius-md);
+    font-size: 12px; color: #ddd; text-align: center;
+    margin-bottom: 20px;
 }
-#core-loader.loaded {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+.license-badge span { color: #555; font-size: 10px; font-weight: 700; margin-right: 4px; }
+
+/* --- 6. LOADING & OTP --- */
+.scan-loader {
+    width: 100%; height: 2px; background: #222; 
+    border-radius: 2px; overflow: hidden; position: relative;
+    margin-bottom: 12px;
+}
+.scan-bar {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 30%;
+    background: var(--accent);
+    animation: scanMove 1s infinite ease-in-out;
+}
+@keyframes scanMove {
+    0% { left: -30%; } 100% { left: 100%; }
+}
+.scan-text {
+    text-align: center; font-size: 10px; color: #666; letter-spacing: 1px;
 }
 
-/* Fab / Menu Animations */
-.export-menu {
-    transform-origin: top right;
-    animation: menuScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.otp-group { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
+.otp-digit { 
+    width: 40px; height: 50px; 
+    background: #111; border: 1px solid #2a2a2a; 
+    border-radius: var(--radius-sm); 
+    color: #fff; font-size: 20px; font-weight: 500; text-align: center; 
+    transition: border-color 0.2s, background 0.2s; caret-color: var(--accent);
 }
-@keyframes menuScale {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+.otp-digit:focus { border-color: var(--accent); background: #000; }
+
+.retry-counter { font-size: 10px; color: var(--danger); text-align: center; height: 14px; margin-top: 8px; }
+
+/* Status Toast */
+.status-toast { 
+    margin-top: 12px; text-align: center;
+    font-size: 11px; font-weight: 500; 
+    opacity: 0; transition: opacity 0.3s; color: #888; 
+}
+.status-toast.visible { opacity: 1; }
+.status-toast.error { color: var(--danger); }
+
+/* --- 7. CORE UI STYLES (SIDEBAR & FAB) --- */
+#main-ui { position: relative; width: 100%; height: 100%; }
+#viewport { position: absolute; inset: 0; background: var(--bg-app); cursor: default; touch-action: none; overflow: hidden; }
+canvas { display: block; width: 100%; height: 100%; }
+
+#sidebar {
+    position: absolute; top: 50%; left: var(--sidebar-margin); width: var(--sidebar-width);
+    transform: translateY(-50%) translateZ(0); max-height: 85vh;
+    background: rgba(12, 12, 14, 0.7); backdrop-filter: blur(50px); -webkit-backdrop-filter: blur(50px);
+    border: 1px solid var(--glass-border); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 24px 60px rgba(0,0,0,0.5);
+    border-radius: var(--radius-lg); display: flex; flex-direction: column; z-index: 100;
+}
+.sidebar-header { padding: 24px 24px 18px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.brand { font-weight: 700; font-size: 14px; letter-spacing: 1px; color: #fff; text-transform: uppercase; }
+.header-tools .icon-btn {
+    width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); 
+    border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s;
+}
+.header-tools .icon-btn:hover { background: #fff; color: #000; transform: rotate(180deg); }
+.sidebar-content { overflow-y: auto; padding: 0 24px 24px; scrollbar-width: none; }
+.sidebar-content::-webkit-scrollbar { display: none; }
+.sidebar-divider { height: 1px; background: #222; width: 100%; margin: 24px 0; }
+.control-section { margin-top: 4px; }
+.section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #666; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+.section-label svg { opacity: 0.7; width: 12px; height: 12px; stroke-width: 2.5; }
+.control-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; min-height: 24px; }
+
+/* FIX: Fixed width for labels to align all sliders perfectly */
+.control-row > label { font-size: 11px; color: #ccc; font-weight: 500; width: 70px; min-width: 70px; flex-shrink: 0; white-space: nowrap; }
+.slider-group { display: flex; align-items: center; gap: 12px; flex: 1; margin-left: 12px; width: 100%; }
+
+/* FIX: Added margin:0 and vertical-align to fix centering issues */
+input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 4px; cursor: pointer; margin: 0; padding: 0; vertical-align: middle; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); cursor: grab; transition: transform 0.1s; margin-top: -6px; }
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type=number] { width: 48px; background: #1a1a1a; border: 1px solid #333; color: #fff; font-size: 12px; padding: 6px; border-radius: var(--radius-sm); text-align: center; -moz-appearance: textfield; transition: all 0.2s; }
+input[type=number]:focus { border-color: #666; background: #000; }
+input[type=color] { -webkit-appearance: none; border: 2px solid #333; width: 32px; height: 32px; border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; background: none; transition: transform 0.2s; }
+input[type=color]:hover { transform: scale(1.1); border-color: #555; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-webkit-color-swatch { border: none; border-radius: 50%; padding: 0; }
+
+.toggle-wrapper { position: relative; width: 44px; height: 24px; }
+.ios-toggle { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-btn { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2a2a2a; transition: .3s; border-radius: 999px; border: 1px solid #333; }
+.toggle-btn:before { position: absolute; content: ""; height: 20px; width: 20px; left: 1px; bottom: 1px; background-color: #888; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.ios-toggle:checked + .toggle-btn { background-color: rgba(223, 255, 0, 0.15); border-color: var(--accent); }
+.ios-toggle:checked + .toggle-btn:before { transform: translateX(20px); background-color: var(--accent); }
+
+.sidebar-footer { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: #666; line-height: 1.5; margin-top: 8px; }
+.version-pill { align-self: flex-start; display: inline-flex; padding: 4px 8px; background: #111; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 10px; font-weight: 700; }
+
+/* FIX: Increased z-index to 1001 to appear above sidebar/sheets */
+.fab-container { position: absolute; top: 24px; right: 24px; z-index: 1001; }
+.fab { width: 48px; height: 48px; background: var(--glass-panel); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.fab:hover { transform: scale(1.05); background: rgba(255,255,255,0.1); }
+.export-menu { position: absolute; top: 60px; right: 0; width: 200px; background: #111; border: 1px solid #222; border-radius: var(--radius-md); padding: 8px; display: none; flex-direction: column; gap: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); z-index: 60; }
+.menu-icon-svg { width: 16px; height: 16px; stroke-width: 2px; opacity: 0.9; flex-shrink: 0; }
+.menu-divider { height: 1px; background: #222; margin: 4px 0; width: 100%;}
+.menu-item.has-icon { justify-content: flex-start; gap: 10px; }
+.menu-item { background: transparent; border: none; color: #aaa; padding: 12px 16px; font-size: 13px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; transition: all 0.1s; }
+.menu-item:hover { background: #222; color: #fff; }
+.menu-item.highlight { color: var(--accent); }
+.zoom-badge { position: absolute; bottom: 32px; left: 32px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); padding: 10px 16px; border-radius: 50px; font-size: 12px; font-weight: 500; display: flex; gap: 8px; align-items: center; color: #fff; pointer-events: none; z-index: 80; }
+.zoom-icon-svg { width: 14px; height: 14px; color: var(--accent); }
+.credit-badge { position: absolute; bottom: 32px; right: 32px; z-index: 90; background: #ffffff; color: #000000; padding: 12px 24px; border-radius: 100px; text-decoration: none; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s; }
+.credit-badge:hover { transform: translateY(-3px); }
+
+/* Mobile Adjustments */
+#sheet-handle { display: none; } 
+@media (max-width: 480px) {
+    .auth-container { max-width: 90%; padding: 24px 20px; }
+    .logo-text { font-size: 18px; }
+    .otp-digit { width: 36px; height: 46px; font-size: 18px; }
 }
 
-/* Canvas/Viewport */
-canvas {
-    display: block;
-    outline: none;
+@media (max-width: 768px) {
+    :root { --sidebar-width: 100%; --sidebar-margin: 0; }
+    #sidebar { position: fixed; top: auto; bottom: 0; left: 0; right: 0; transform: translateY(calc(100% - 70px)); width: 100%; height: auto; max-height: 85vh; border-radius: 32px 32px 0 0; border: 1px solid #222; border-bottom: none; box-shadow: 0 -10px 60px rgba(0,0,0,0.8); padding-bottom: calc(24px + env(safe-area-inset-bottom)); transition: none; background: rgba(12, 12, 14, 0.92); backdrop-filter: blur(40px); }
+    .sidebar-header { cursor: grab; position: relative; padding-top: 30px; }
+    #sheet-handle { display: block; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 40px; height: 5px; background: #333; border-radius: 10px; transition: background 0.3s; }
+    .sidebar-header:active #sheet-handle { background: var(--accent); }
+    .zoom-badge { bottom: 100px; left: 24px; }
+    .fab-container { top: 20px; right: 20px; }
+    .credit-badge { display: none; } 
 }
+
+/* Core Loader (Black Curtain) */
+#core-loader { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; transition: opacity 0.8s ease-in-out, visibility 0.8s; }
+#core-loader.loaded { opacity: 0; visibility: hidden; pointer-events: none; }
+.loader-spinner { width: 40px; height: 40px; border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite; }
