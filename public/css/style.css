@@ -595,7 +595,7 @@ canvas { display: block; width: 100%; height: 100%; }
     background: rgba(223, 255, 0, 0.1); /* Low opacity acid background */
     
     /* Border and Text use the Acid Accent */
-    border: 0.5px solid var(--accent); 
+    border: 1px solid var(--accent); 
     color: var(--accent); 
     
     font-size: 10px; 
