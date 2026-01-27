@@ -4,14 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#030303">
-    <meta name="description" content="MetaStar Studio Pro - Web-based Vector Manipulation Engine">
+    <meta name="description" content="MetaStar Studio Pro - 4-Point Star Engine">
     
     <title>MetaStar Studio Pro</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/Draggable.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/InertiaPlugin.min.js" defer></script>
@@ -30,9 +32,9 @@
 
             <div id="state-identity" class="auth-state active">
                 <div class="input-wrapper">
-                    <input type="email" id="email-input" class="modern-input" placeholder="Enter Access ID (Email)" autocomplete="email" inputmode="email">
+                    <input type="email" id="email-input" class="modern-input" placeholder="Enter Access ID" autocomplete="email" inputmode="email">
                     <div class="input-icon">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                        <i class="ph ph-envelope-simple"></i>
                     </div>
                 </div>
                 
@@ -50,9 +52,8 @@
             </div>
 
             <div id="state-success" class="auth-state hidden">
-                <div class="icon-stage success">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                </div>
+                <i class="ph-duotone ph-check-circle auth-hero-icon success"></i>
+                
                 <div class="msg-header">LICENSE VERIFIED</div>
                 
                 <div class="license-badge">
@@ -70,14 +71,13 @@
             </div>
 
             <div id="state-purchase" class="auth-state hidden">
-                <div class="icon-stage warning">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                </div>
+                <i class="ph-duotone ph-warning-circle auth-hero-icon warning"></i>
+                
                 <div class="msg-header warning">NO SUBSCRIPTION FOUND</div>
                 <div class="msg-sub">Access to MetaStar requires an active license.</div>
 
                 <button id="btn-buy-access" class="primary-btn btn-purchase">
-                    <span>PURCHASE LICENSE &rarr;</span>
+                    <span>PURCHASE LICENSE <i class="ph-bold ph-arrow-right" style="vertical-align: middle;"></i></span>
                 </button>
                 
                 <div class="footer-row">
@@ -88,14 +88,13 @@
             </div>
 
             <div id="state-terminated" class="auth-state hidden">
-                <div class="icon-stage danger">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                </div>
+                <i class="ph-duotone ph-prohibit auth-hero-icon danger"></i>
+                
                 <div class="msg-header danger">ACCESS TERMINATED</div>
                 <div class="msg-sub">Your license has been revoked by admin.</div>
 
                 <button id="btn-renew" class="primary-btn btn-purchase">
-                    <span>RENEW ACCESS &rarr;</span>
+                    <span>RENEW ACCESS <i class="ph-bold ph-arrow-right"></i></span>
                 </button>
                 
                 <div class="footer-row">
@@ -131,9 +130,8 @@
             </div>
 
             <div id="state-resume" class="auth-state hidden" style="align-items: center;">
-                <div class="icon-stage">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
+                <i class="ph-duotone ph-user-focus auth-hero-icon"></i>
+                
                 <div class="msg-header">WELCOME BACK</div>
                 <div id="resume-email" class="msg-sub"></div>
                 
@@ -155,27 +153,43 @@
         
         <main id="viewport">
             <canvas id="canvas"></canvas>
-            
-            <div class="zoom-badge" id="zoomBadge">
-                <svg class="zoom-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <span id="zoom-val">100%</span>
-            </div>
         </main>
 
-        <div class="fab-container">
-            <button class="fab" id="btn-export-trigger" title="Export">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            </button>
-            <div class="export-menu" id="export-menu">
-                <button class="menu-item" data-fmt="png">Save PNG</button>
-                <button class="menu-item" data-fmt="jpg">Save JPG</button>
-                <div class="menu-divider"></div>
-                <button class="menu-item highlight has-icon" data-fmt="svg">Export SVG</button>
+        <header id="workspace-header">
+            
+            <div class="tool-group zoom-group">
+                <button class="tool-btn icon-only" id="btn-zoom-dec" title="Zoom Out">
+                    <i class="ph-bold ph-minus"></i>
+                </button>
+                <div class="tool-readout" id="zoomBadge">
+                    <span id="zoom-val">100%</span>
+                </div>
+                <button class="tool-btn icon-only" id="btn-zoom-inc" title="Zoom In">
+                    <i class="ph-bold ph-plus"></i>
+                </button>
             </div>
-        </div>
+
+            <div class="tool-group export-wrapper">
+                <button class="tool-btn pill-btn" id="btn-export-trigger">
+                    <i class="ph-bold ph-download-simple"></i>
+                </button>
+                
+                <div class="export-menu" id="export-menu">
+                    <button class="menu-item" data-fmt="png">
+                        Save PNG <span class="ext">.png</span>
+                    </button>
+                    <button class="menu-item" data-fmt="jpg">
+                        Save JPG <span class="ext">.jpg</span>
+                    </button>
+                    <div class="menu-divider"></div>
+                    <button class="menu-item highlight has-icon" data-fmt="svg">
+                        Export SVG
+                        <i class="ph-bold ph-code"></i>
+                    </button>
+                </div>
+            </div>
+
+        </header>
 
         <aside id="sidebar">
             <div id="sheet-handle"></div>
@@ -183,58 +197,73 @@
             <div class="sidebar-header" id="mobile-drag-trigger">
                 <span class="brand">MetaStar</span>
                 <div class="header-tools">
-                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">↺</button>
+                    <button class="icon-btn" id="btn-reset-settings" title="Reset All">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                    </button>
                 </div>
-
             </div>
             
             <div class="sidebar-content">
                 
                 <div class="control-section">
                     <div class="section-label">
-                        <svg width="20" height="20" viewBox="0 0 19 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9.5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 0V1M8 6.3 1 20m10-13.7 7 13.7M17.5 13c-1.6 2.4-4.6 4-8 4-3.5 0-6.5-1.6-8-4"/>
-                        </svg>
-                        Geometry
+                        <i class="ph-duotone ph-polygon"></i> Geometry
                     </div>
                     <div class="control-row">
                         <label>Top</label>
-                        <div class="slider-group"><input type="range" id="r-t" min="0" max="100"><input type="number" id="n-t"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-t" min="0" max="100" value="25" class="input-slider">
+                            <input type="number" id="n-t" class="input-value" value="25">
+                        </div>
                     </div>
                     <div class="control-row">
                         <label>Right</label>
-                        <div class="slider-group"><input type="range" id="r-r" min="0" max="100"><input type="number" id="n-r"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-r" min="0" max="100" value="25" class="input-slider">
+                            <input type="number" id="n-r" class="input-value" value="25">
+                        </div>
                     </div>
                     <div class="control-row">
                         <label>Bottom</label>
-                        <div class="slider-group"><input type="range" id="r-b" min="0" max="100"><input type="number" id="n-b"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-b" min="0" max="100" value="25" class="input-slider">
+                            <input type="number" id="n-b" class="input-value" value="25">
+                        </div>
                     </div>
                     <div class="control-row">
                         <label>Left</label>
-                        <div class="slider-group"><input type="range" id="r-l" min="0" max="100"><input type="number" id="n-l"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-l" min="0" max="100" value="25" class="input-slider">
+                            <input type="number" id="n-l" class="input-value" value="25">
+                        </div>
                     </div>
-                </div>
 
                 <div class="sidebar-divider"></div>
 
                 <div class="control-section">
                     <div class="section-label">
-                        <svg width="20" height="20" viewBox="0 0 19 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M3 15V5M3 15C1.89543 15 1 15.8954 1 17C1 18.1046 1.89543 19 3 19C4.10457 19 5 18.1046 5 17M3 15C4.10457 15 5 15.8954 5 17M3 5C4.10457 5 5 4.10457 5 3M3 5C1.89543 5 1 4.10457 1 3C1 1.89543 1.89543 1 3 1C4.10457 1 5 1.89543 5 3M5 3H15M15 3C15 4.10457 15.8954 5 17 5M15 3C15 1.89543 15.8954 1 17 1C18.1046 1 19 1.89543 19 3C19 4.10457 18.1046 5 17 5M17 5V15M17 15C15.8954 15 15 15.8954 15 17M17 15C18.1046 15 19 15.8954 19 17C19 18.1046 18.1046 19 17 19C15.8954 19 15 18.1046 15 17M5 17H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Transform
+                        <i class="ph-duotone ph-arrows-out-cardinal"></i> Transform
                     </div>
                     <div class="control-row">
                         <label>Skew X</label>
-                        <div class="slider-group"><input type="range" id="r-sx" min="-50" max="50"><input type="number" id="n-sx"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-sx" min="-100" max="100" class="input-slider">
+                            <input type="number" id="n-sx" class="input-value">
+                        </div>
                     </div>
                     <div class="control-row">
                         <label>Skew Y</label>
-                        <div class="slider-group"><input type="range" id="r-sy" min="-50" max="50"><input type="number" id="n-sy"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-sy" min="-100" max="100" class="input-slider">
+                            <input type="number" id="n-sy" class="input-value">
+                        </div>
                     </div>
                     <div class="control-row">
                         <label>Curve</label>
-                        <div class="slider-group"><input type="range" id="r-c" min="0" max="100" step="0.5"><input type="number" id="n-c"></div>
+                        <div class="slider-group">
+                            <input type="range" id="r-c" min="0" max="100" step="0.5" value="75" class="input-slider">
+                            <input type="number" id="n-c" class="input-value" value="75">
+                        </div>
                     </div>
                 </div>
 
@@ -242,10 +271,7 @@
 
                 <div class="control-section">
                     <div class="section-label">
-                        <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 1v16M1 6h16M3 17h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
-                        </svg>
-                        View
+                        <i class="ph-duotone ph-eye"></i> View
                     </div>
                     
                     <div class="control-row">
@@ -265,11 +291,11 @@
                     
                     <div class="control-row">
                         <label>Fill</label>
-                        <input type="color" id="starCol" value="#dfff00">
+                        <input type="color" id="starCol" value="#dfff00" class="input-color">
                     </div>
                     <div class="control-row">
                         <label>Canvas</label>
-                        <input type="color" id="bgCol" value="#050505">
+                        <input type="color" id="bgCol" value="#000000" class="input-color">
                     </div>
                 </div>
 
@@ -277,13 +303,21 @@
                 
                 <div class="sidebar-footer">
                     <div>Forged by a designer, for the visionaries. A dedicated instrument for instant star creation.</div>
-                    <div class="version-pill">v2.0 PRO</div>
+                    <div class="version-pill">v2.1 PRO</div>
                 </div>
             </div>
         </aside>
 
         <a href="https://linktr.ee/pvrplxd" target="_blank" class="credit-badge">
-            Made by Pvrplxd
+            <div class="badge-logo">
+                <svg viewBox="0 0 700 550" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M450 20C450 8.9543 441.046 0 430 0H370C358.954 0 350 8.95431 350 20V275.5L450 354V20Z" fill="white"/>
+                    <path d="M250 20C250 8.95431 241.046 0 230 0H150H0L250 200V20Z" fill="white"/>
+                    <path d="M450 530C450 541.046 458.954 550 470 550H550H700L450 354V530Z" fill="white"/>
+                    <path d="M350 275.5L250 197V530C250 541.046 258.954 550 270 550H330C341.046 550 350 541.046 350 530V275.5Z" fill="white"/>
+                </svg>
+            </div>
+            <span class="badge-text">Made by Pvrplxd</span>
         </a>
     </div>
 
