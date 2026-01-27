@@ -294,12 +294,58 @@ canvas { display: block; width: 100%; height: 100%; }
 .control-row > label { font-size: 11px; color: #ccc; font-weight: 500; width: 70px; min-width: 70px; flex-shrink: 0; white-space: nowrap; }
 .slider-group { display: flex; align-items: center; gap: 12px; flex: 1; margin-left: 12px; width: 100%; }
 
-/* FIX: Added margin:0 and vertical-align to fix centering issues */
-input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 4px; cursor: pointer; margin: 0; padding: 0; vertical-align: middle; }
-input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); cursor: grab; transition: transform 0.1s; margin-top: -6px; }
-input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-input[type=number] { width: 48px; background: #1a1a1a; border: 1px solid #333; color: #fff; font-size: 12px; padding: 6px; border-radius: var(--radius-sm); text-align: center; -moz-appearance: textfield; transition: all 0.2s; }
-input[type=number]:focus { border-color: #666; background: #000; }
+/* --- REDESIGNED SLIDERS AND INPUTS --- */
+
+/* 1. Range Slider */
+input[type=range] { 
+    -webkit-appearance: none; 
+    width: 100%; 
+    height: 20px; 
+    background: #1E1E1E; /* Base track color (Right side). Dynamic fill handled by JS */
+    border-radius: 5px; 
+    cursor: pointer; 
+    margin: 0; 
+    padding: 0; 
+    vertical-align: middle; 
+}
+
+/* Slider Thumb (Handle) */
+input[type=range]::-webkit-slider-thumb { 
+    -webkit-appearance: none; 
+    width: 15px; 
+    height: 20px; 
+    border-radius: 5px; 
+    background: #FFFFFF; 
+    box-shadow: -2px 0px 15px rgba(0, 0, 0, 0.3); 
+    cursor: grab; 
+    transition: transform 0.1s; 
+    margin-top: 0; /* Perfectly centered within the 20px track */
+}
+
+input[type=range]::-webkit-slider-thumb:hover { 
+    transform: scale(1.05); 
+}
+
+/* 2. Value Box (Number Input) */
+input[type=number] { 
+    width: 65px; 
+    height: 35px;
+    background: #000000; 
+    border: 1px solid #1E1E1E; 
+    color: #fff; 
+    font-size: 16px; 
+    padding: 0; 
+    border-radius: 10px; 
+    text-align: center; 
+    -moz-appearance: textfield; 
+    transition: all 0.2s; 
+}
+input[type=number]:focus { 
+    border-color: #666; 
+}
+
+/* ------------------------------------- */
+
 input[type=color] { -webkit-appearance: none; border: 2px solid #333; width: 32px; height: 32px; border-radius: 50%; overflow: hidden; padding: 0; cursor: pointer; background: none; transition: transform 0.2s; }
 input[type=color]:hover { transform: scale(1.1); border-color: #555; }
 input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
