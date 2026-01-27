@@ -420,7 +420,6 @@ function initControls() {
     bindToggle('checkGrid', 'showGrid');
     bindToggle('checkBones', 'showBones');
 }
-
 // --- WORKSPACE TOOLS ---
 
 // Initialize with correct Responsive Zoom (15% Mobile, 60% Desktop)
