@@ -137,8 +137,54 @@ const UI = {
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
+    // --- 5. NEW VISUAL LOGIC FOR META SLIDERS ---
+    initSliders: () => {
+        const ranges = document.querySelectorAll('input[type="range"]');
+        
+        // Helper to update the gradient background
+        const updateVisuals = (rangeInput) => {
+            const min = parseFloat(rangeInput.min) || 0;
+            const max = parseFloat(rangeInput.max) || 100;
+            const val = parseFloat(rangeInput.value) || 0;
+            
+            // Calculate percentage
+            let percentage = ((val - min) / (max - min)) * 100;
+            percentage = Math.min(Math.max(percentage, 0), 100); // Clamp between 0-100
+
+            // Apply Linear Gradient: #717171 (Left) -> #1E1E1E (Right)
+            rangeInput.style.background = `linear-gradient(to right, #717171 0%, #717171 ${percentage}%, #1E1E1E ${percentage}%, #1E1E1E 100%)`;
+        };
+
+        ranges.forEach(range => {
+            // 1. Set Initial State
+            updateVisuals(range);
+
+            // 2. Listen for Drag Events
+            range.addEventListener('input', () => updateVisuals(range));
+
+            // 3. Listen for Sibling Number Updates (Two-way sync)
+            const siblingNum = range.parentElement.querySelector('input[type="number"]');
+            if(siblingNum) {
+                siblingNum.addEventListener('input', () => {
+                    // Slight delay allows the value to propagate if managed by core
+                    setTimeout(() => updateVisuals(range), 0);
+                });
+            }
+        });
+
+        // 4. Hook into Reset Button (to refresh visuals after reset)
+        const resetBtn = document.getElementById('btn-reset-settings');
+        if(resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                // Wait for the core engine to reset values, then update visuals
+                setTimeout(() => {
+                    ranges.forEach(r => updateVisuals(r));
+                }, 50); 
+            });
+        }
+    },
+
     // --- CORE PHYSICS (Mobile Sheet Drag ONLY) ---
-    // Note: Slider physics removed to fix jitter. Native range inputs are used instead.
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
@@ -349,7 +395,9 @@ function unlockApp() {
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
-        // Logic check: initSliders() is intentionally removed here.
+        
+        // --- NEW SLIDER LOGIC INITIALIZATION ---
+        UI.initSliders(); 
     }); 
 }
 
