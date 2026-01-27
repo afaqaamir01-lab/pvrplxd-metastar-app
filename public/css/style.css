@@ -366,8 +366,7 @@ button { font-family: var(--font-ui); }
 }
 
 .pill-btn:hover {
-    background: rgb(20, 20, 20); 
-    border-color: rgb(20, 20, 20);
+    background:  #1f1f1f; 
     transform: translateY(-2px);
 }
 
@@ -377,7 +376,7 @@ button { font-family: var(--font-ui); }
 .export-menu { 
     position: absolute; top: 50px; right: 0; 
     width: 200px; 
-    background: #111; 
+    background: #050505; 
     border: 1px solid #222; 
     border-radius: var(--radius-md); 
     padding: 8px; 
@@ -442,7 +441,11 @@ canvas { display: block; width: 100%; height: 100%; }
     display: flex; justify-content: space-between; align-items: center; 
     flex-shrink: 0; 
 }
-.brand { font-weight: 700; font-size: 16px; letter-spacing: 0.5px; color: #fff; }
+.brand-logo {
+    height: 32px; /* Matches .icon-btn height */
+    width: auto;  /* Maintains the wide aspect ratio */
+    display: block;
+}
 
 .header-tools .icon-btn {
     width: 32px; height: 32px; border-radius: 50%; 
@@ -664,10 +667,10 @@ canvas { display: block; width: 100%; height: 100%; }
         justify-content: space-between;
     }
     
-    .zoom-group { background: #111; border-color: #333; }
+    .zoom-group { background: #050505; border-color: #333; }
 
     .pill-btn {
-        background: #050505;
+        background: #050505 !important;
         -webkit-appearance: none;
     }
 
