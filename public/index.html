@@ -51,6 +51,20 @@
                 <div class="scan-text">VERIFYING CREDENTIALS...</div>
             </div>
 
+            <div id="state-authenticated" class="auth-state hidden" style="align-items: center;">
+                <i class="ph-duotone ph-shield-check auth-hero-icon success"></i>
+                
+                <div class="msg-header">IDENTITY CONFIRMED</div>
+                
+                <div class="auth-identity-card">
+                    <div class="id-label">LOGGED IN AS</div>
+                    <div class="id-value" id="auth-card-email">user@example.com</div>
+                    <i class="ph-fill ph-check-circle id-icon"></i>
+                </div>
+
+                <div class="scan-text" style="margin-top: 16px;">UNLOCKING ENGINE...</div>
+            </div>
+
             <div id="state-success" class="auth-state hidden">
                 <i class="ph-duotone ph-check-circle auth-hero-icon success"></i>
                 
@@ -176,10 +190,10 @@
                 
                 <div class="export-menu" id="export-menu">
                     <button class="menu-item" data-fmt="png">
-                        Save PNG <span class="ext">.png</span>
+                        Export PNG <span class="ext">.png</span>
                     </button>
                     <button class="menu-item" data-fmt="jpg">
-                        Save JPG <span class="ext">.jpg</span>
+                        Export JPG <span class="ext">.jpg</span>
                     </button>
                     <div class="menu-divider"></div>
                     <button class="menu-item highlight has-icon" data-fmt="svg">
