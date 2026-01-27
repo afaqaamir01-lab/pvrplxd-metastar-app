@@ -683,7 +683,7 @@ canvas { display: block; width: 100%; height: 100%; }
         box-shadow: 0 -10px 60px rgba(0,0,0,0.8); 
         padding-bottom: calc(24px + env(safe-area-inset-bottom)); 
         transition: none; 
-        background: #000000;
+        background: #050505;
     }
     .sidebar-header { cursor: grab; position: relative; padding-top: 30px; }
     
