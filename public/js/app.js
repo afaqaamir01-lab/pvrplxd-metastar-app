@@ -1,6 +1,6 @@
 // --- CONFIGURATION ---
 const API_URL = "https://metastar-v2.afaqaamir01.workers.dev";
-const PURCHASE_URL = "https://whop.com/pvrplxd/metastarpro/"; 
+const PURCHASE_URL = "https://whop.com/pvrplxd/metastar-4-point-star-engine/"; 
 const CONTACT_EMAIL = "afaqaamir01@gmail.com";
 
 // --- STATE ---
@@ -137,36 +137,8 @@ const UI = {
           .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
-    // 5. Theme Management (NEW)
-    toggleTheme: () => {
-        const html = document.documentElement;
-        const current = html.getAttribute('data-theme');
-        const isLight = current === 'light';
-        const newTheme = isLight ? 'dark' : 'light';
-        
-        // Switch Semantic Layer
-        html.setAttribute('data-theme', newTheme);
-        localStorage.setItem('ms_theme', newTheme);
-
-        // Sync with Canvas Engine
-        const bgInput = document.getElementById('bgCol');
-        const starInput = document.getElementById('starCol');
-
-        if(bgInput && starInput) {
-            if (newTheme === 'light') {
-                bgInput.value = "#ffffff"; 
-                starInput.value = "#000000"; 
-            } else {
-                bgInput.value = "#050505";
-                starInput.value = "#dfff00";
-            }
-            // Trigger Engine Update
-            bgInput.dispatchEvent(new Event('input'));
-            starInput.dispatchEvent(new Event('input'));
-        }
-    },
-
     // --- CORE PHYSICS (Mobile Sheet Drag ONLY) ---
+    // Note: Slider physics removed to fix jitter. Native range inputs are used instead.
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
@@ -223,19 +195,6 @@ function setLoading(btn, load) {
 
 // --- APP INIT FLOW ---
 async function initApp() {
-    // 1. Restore Theme Preference (Before anything else)
-    const savedTheme = localStorage.getItem('ms_theme');
-    if(savedTheme) {
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        // Preset inputs so Core engine initializes with correct colors
-        const bgInput = document.getElementById('bgCol');
-        const starInput = document.getElementById('starCol');
-        if(bgInput && starInput && savedTheme === 'light') {
-            bgInput.value = "#ffffff";
-            starInput.value = "#000000";
-        }
-    }
-
     setupOtpInteractions();
     bindEvents();
     
@@ -390,6 +349,7 @@ function unlockApp() {
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
+        // Logic check: initSliders() is intentionally removed here.
     }); 
 }
 
@@ -417,10 +377,6 @@ function bindEvents() {
     if(els.btnRefresh) els.btnRefresh.onclick = checkLicense;
     if(els.btnContact) els.btnContact.onclick = () => window.location.href = `mailto:${CONTACT_EMAIL}`;
     
-    // NEW: Theme Toggle Button
-    const themeBtn = document.getElementById('btn-theme-toggle');
-    if(themeBtn) themeBtn.onclick = () => UI.toggleTheme();
-
     document.querySelectorAll('.action-back').forEach(btn => {
         btn.onclick = () => UI.switchState('state-identity', 'SYSTEM READY');
     });
