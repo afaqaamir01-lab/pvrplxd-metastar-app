@@ -51,24 +51,22 @@ const els = {
 
 // --- UI CONTROLLER ---
 const UI = {
-    // 1. Entrance Animation (Updated for HeroUI Card)
+    // 1. Entrance Animation
     intro: () => {
         if(!msToken) {
             if(els.coreLoader) els.coreLoader.classList.add('loaded');
         }
-        // Subtle pop-in for the glass card
-        gsap.set(".auth-container", { scale: 0.95, opacity: 0, y: 10 }); 
-        gsap.to(".auth-container", { scale: 1, opacity: 1, y: 0, duration: 0.8, ease: "power3.out", delay: 0.2 });
+        gsap.set(".auth-container", { scale: 0.9, opacity: 0 }); 
+        gsap.to(".auth-container", { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(1.2)", delay: 0.2 });
     },
 
-    // 2. Terminal State Switcher (Cleaner Transition)
+    // 2. Terminal State Switcher
     switchState: (stateId, statusText = "PROCESSING...") => {
         const allStates = document.querySelectorAll('.auth-state');
         const target = document.getElementById(stateId);
         
         if(els.terminalStatus) els.terminalStatus.innerText = statusText;
 
-        // Hide current states
         allStates.forEach(el => {
             if(el !== target) {
                 el.classList.remove('active');
@@ -77,39 +75,32 @@ const UI = {
         });
 
         if(target) {
-            // Activate new state
             target.classList.remove('hidden');
             target.classList.add('active');
             
-            // Animate container height smoothly
             gsap.to(els.authContainer, { 
                 height: "auto", 
-                duration: 0.5, 
-                ease: "power3.inOut" 
+                duration: 0.4, 
+                ease: "power2.out" 
             });
             
-            // Fade in content
             gsap.fromTo(target, 
-                { opacity: 0, y: 5 }, 
-                { opacity: 1, y: 0, duration: 0.4, ease: "power2.out", clearProps: "all" }
+                { opacity: 0, y: 10 }, 
+                { opacity: 1, y: 0, duration: 0.3, clearProps: "all" }
             );
         }
     },
 
     // 3. Error Feedback
     shakeError: () => {
-        // Shakes the whole card
-        gsap.fromTo(".auth-container", { x: -4 }, { x: 4, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
+        gsap.fromTo(".auth-container", { x: -6 }, { x: 6, duration: 0.08, repeat: 3, yoyo: true, clearProps: "x" });
     },
 
     showStatus: (msg, isErr) => {
         if(!els.statusMsg) return;
         els.statusMsg.innerText = msg;
-        // Toggle Tailwind classes for visibility and color
         els.statusMsg.classList.add('visible');
         els.statusMsg.classList.toggle('error', isErr);
-        els.statusMsg.classList.toggle('text-zinc-400', !isErr); // Default text color
-        
         setTimeout(() => els.statusMsg.classList.remove('visible'), 3500);
     },
 
@@ -119,8 +110,7 @@ const UI = {
             els.retryCounter.innerText = "";
         } else {
             els.retryCounter.innerText = `${remaining} ATTEMPTS REMAINING`;
-            // Pulse animation for urgency
-            gsap.fromTo(els.retryCounter, { opacity: 0.5 }, { opacity: 1, duration: 0.5, yoyo: true, repeat: 3 });
+            gsap.fromTo(els.retryCounter, { color: "#fff" }, { color: "#ff4444", duration: 0.5 });
         }
     },
 
@@ -128,39 +118,38 @@ const UI = {
     prepareForCore: (onComplete) => {
         if(els.coreLoader) els.coreLoader.classList.remove('loaded'); 
         
-        // Scale down auth card and fade out
         const tl = gsap.timeline({ onComplete });
-        tl.to(els.authLayer, { opacity: 0, backdropFilter: "blur(0px)", duration: 0.5 })
+        tl.to(els.authLayer, { opacity: 0, scale: 0.95, duration: 0.4 })
           .set(els.authLayer, { display: "none" })
-          .set(els.mainUI, { visibility: "visible", opacity: 1 });
+          .set(els.mainUI, { visibility: "visible" });
     },
 
     revealInterface: () => {
         if(els.coreLoader) els.coreLoader.classList.add('loaded'); 
         
+        // Ensure FAB is above everything
         gsap.set(".fab-container", { zIndex: 1001 });
 
-        // HeroUI Entrance Sequence
         const tl = gsap.timeline();
-        tl.to("#main-ui", { opacity: 1, duration: 0.5 }) // Fade in main container
-          .from(els.sidebar, { y: 20, opacity: 0, duration: 0.8, ease: "power3.out" }, "-=0.2")
-          .from(".control-row", { x: -10, opacity: 0, stagger: 0.02, duration: 0.5 }, "-=0.4")
+        tl.from(els.sidebar, { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" }, "+=0.2")
+          .from(".control-row", { x: -10, opacity: 0, stagger: 0.03, duration: 0.5 }, "-=0.4")
           .from(".fab", { scale: 0, rotation: -90, duration: 0.6, ease: "back.out(1.5)" }, "-=0.6")
-          .from("canvas", { opacity: 0, duration: 1 }, "-=0.8");
+          .from("canvas", { opacity: 0, duration: 1 }, "-=1");
     },
 
-    // --- CORE PHYSICS (Mobile Sheet Drag) ---
+    // --- CORE PHYSICS (Mobile Sheet Drag ONLY) ---
+    // Note: Slider physics removed to fix jitter. Native range inputs are used instead.
     initMobileDrag: () => {
         if (window.innerWidth > 768) return;
         const header = document.querySelector('.sidebar-header');
         if (!els.sidebar || !header || typeof Draggable === 'undefined') return;
 
-        // Calculate snap points based on the new Tailwind layout
         const getSnapPoints = () => {
             const h = els.sidebar.offsetHeight;
-            const closedY = h - 70; // Keep header visible
+            const closedY = h - 80; 
             const openY = 0; 
-            return { openY, closedY };
+            const midY = closedY * 0.45; 
+            return { openY, midY, closedY };
         };
 
         Draggable.create(els.sidebar, {
@@ -169,17 +158,22 @@ const UI = {
             inertia: true,
             edgeResistance: 0.65,
             dragClickables: false, 
-            // Lock movement to vertical axis within logical bounds
-            bounds: { minY: 0, maxY: 600 }, 
+            bounds: { minY: 0, maxY: 1000 }, 
             onPress: function() {
                 const { closedY } = getSnapPoints();
                 this.applyBounds({ minY: 0, maxY: closedY });
             },
-            onDragEnd: function() {
-                const { openY, closedY } = getSnapPoints();
-                // Simple snap logic: >50% goes to closest state
-                const dest = (Math.abs(this.y) > closedY / 2) ? closedY : openY;
-                gsap.to(this.target, { y: dest, duration: 0.5, ease: "power3.out" });
+            snap: {
+                y: function(value) {
+                    const { openY, midY, closedY } = getSnapPoints();
+                    const distToOpen = Math.abs(value - openY);
+                    const distToMid = Math.abs(value - midY);
+                    const distToClosed = Math.abs(value - closedY);
+
+                    if (distToOpen < distToMid && distToOpen < distToClosed) return openY; 
+                    if (distToMid < distToClosed) return midY; 
+                    return closedY; 
+                }
             }
         });
     }
@@ -192,31 +186,14 @@ function getAuthHeaders() {
     return headers;
 }
 
-// **UPDATED**: Loading State Toggle for Tailwind
 function setLoading(btn, load) { 
     if(!btn) return; 
-    
-    // Toggle pointer events and style
-    btn.disabled = load;
-    btn.classList.toggle('cursor-not-allowed', load);
-    btn.classList.toggle('opacity-80', load);
-    
-    const l = btn.querySelector('.btn-loader');
-    const t = btn.querySelector('span'); // Button text span
-    
-    if(l) {
-        // Tailwind toggle: 'hidden' class
-        if(load) l.classList.remove('hidden'); 
-        else l.classList.add('hidden');
-    }
-    
-    if(t) {
-        // Fade text out slightly while loading
-        t.style.opacity = load ? '0' : '1';
-    }
+    btn.classList.toggle('loading', load); btn.disabled = load;
+    const l = btn.querySelector('.btn-loader'), t = btn.querySelector('span');
+    if(l) l.style.display = load?'block':'none'; if(t) t.style.opacity = load?'0':'1';
 }
 
-// --- APP INIT FLOW (UNCHANGED LOGIC) ---
+// --- APP INIT FLOW ---
 async function initApp() {
     setupOtpInteractions();
     bindEvents();
@@ -273,7 +250,7 @@ function loadProtectedCore() {
     });
 }
 
-// --- AUTH LOGIC (UNCHANGED) ---
+// --- AUTH LOGIC ---
 async function checkLicense() {
     const email = els.emailInput.value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { UI.shakeError(); return UI.showStatus("Invalid email", true); }
@@ -363,39 +340,26 @@ function clearOtpInputs() { els.otpContainer.querySelectorAll('input').forEach(i
 
 function startResendTimer() {
     if(!els.btnResend) return;
-    let t = 60; els.btnResend.classList.add("hidden"); // Tailwind Hidden
+    let t = 60; els.btnResend.style.display = "none";
     if(resendTimer) clearInterval(resendTimer);
-    resendTimer = setInterval(() => { 
-        t--; 
-        if(t<=0) { 
-            clearInterval(resendTimer); 
-            els.btnResend.classList.remove("hidden"); // Tailwind Show
-            els.btnResend.innerText="Resend Code"; 
-        } 
-    }, 1000);
+    resendTimer = setInterval(() => { t--; if(t<=0) { clearInterval(resendTimer); els.btnResend.style.display = "block"; els.btnResend.innerText="Resend Code"; } }, 1000);
 }
 
 function unlockApp() { 
     UI.prepareForCore(() => { 
         loadProtectedCore(); 
         UI.initMobileDrag(); 
+        // Logic check: initSliders() is intentionally removed here.
     }); 
 }
 
 function setupOtpInteractions() {
     const inputs = els.otpContainer.querySelectorAll('input');
     inputs.forEach((input, i) => {
-        // Auto-focus next logic
-        input.addEventListener('input', (e) => { 
-            if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus(); 
-        });
-        input.addEventListener('keydown', (e) => { 
-            if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus(); 
-            if (e.key === 'Enter') verifyOtp(); 
-        });
+        input.addEventListener('input', (e) => { if (e.target.value && i < inputs.length - 1) inputs[i + 1].focus(); });
+        input.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !e.target.value && i > 0) inputs[i - 1].focus(); if (e.key === 'Enter') verifyOtp(); });
         input.addEventListener('paste', (e) => {
-            e.preventDefault(); 
-            const d = e.clipboardData.getData('text').slice(0, 6).split('');
+            e.preventDefault(); const d = e.clipboardData.getData('text').slice(0, 6).split('');
             d.forEach((c, idx) => { if(inputs[idx]) inputs[idx].value = c; });
             if(d.length===6) verifyOtp();
         });
@@ -419,32 +383,11 @@ function bindEvents() {
 
     if(els.emailInput) els.emailInput.addEventListener('keypress', (e) => { if(e.key==='Enter') checkLicense() });
 
-    // Export Menu Toggle
     const expBtn = document.getElementById('btn-export-trigger'), expMenu = document.getElementById('export-menu');
     if(expBtn && expMenu) {
-        document.addEventListener('click', e => { 
-            if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) {
-                // Tailwind: add hidden, remove flex
-                expMenu.classList.add('hidden');
-                expMenu.classList.remove('flex');
-            } 
-        });
-        expBtn.onclick = e => { 
-            e.stopPropagation(); 
-            // Toggle visibility classes
-            if (expMenu.classList.contains('hidden')) {
-                expMenu.classList.remove('hidden');
-                expMenu.classList.add('flex');
-            } else {
-                expMenu.classList.add('hidden');
-                expMenu.classList.remove('flex');
-            }
-        };
-        expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { 
-            window.MetaStar?.export(b.dataset.fmt); 
-            expMenu.classList.add('hidden');
-            expMenu.classList.remove('flex');
-        });
+        document.addEventListener('click', e => { if(!expBtn.contains(e.target) && !expMenu.contains(e.target)) expMenu.style.display='none'; });
+        expBtn.onclick = e => { e.stopPropagation(); expMenu.style.display = expMenu.style.display==='flex'?'none':'flex'; };
+        expMenu.querySelectorAll('.menu-item').forEach(b => b.onclick = () => { window.MetaStar?.export(b.dataset.fmt); expMenu.style.display='none'; });
     }
     const rst = document.getElementById('btn-reset-settings');
     if(rst) rst.onclick = () => window.MetaStar?.reset();
