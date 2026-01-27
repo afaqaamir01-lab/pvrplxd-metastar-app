@@ -298,54 +298,107 @@ function loadProtectedCore() {
 
 // *** CONTROL BINDINGS ***
 function initControls() {
-    // Helper to sync Range Slider <-> Number Input
+    // Helper to sync Range Slider <-> Number Input AND enable Figma-Style Scrubbing
     const sync = (rangeId, numId, param) => {
         const r = document.getElementById(rangeId);
         const n = document.getElementById(numId);
         
         if (!r || !n) return;
 
-        // Set initial values (defaults)
+        // 1. Initial Defaults
         if(!r.value) r.value = 0;
         n.value = r.value;
 
-        // Listener: Slider updates Number & Core
+        // 2. Slider Updates -> Input & Engine
         r.addEventListener('input', () => {
             n.value = r.value;
             window.MetaStar?.update?.(param, parseFloat(r.value));
         });
 
-        // Listener: Number updates Slider & Core
-        n.addEventListener('input', () => {
-            // Clamp value to slider bounds
+        // 3. Input Updates -> Slider & Engine (Typing)
+        n.addEventListener('change', () => {
             let val = parseFloat(n.value);
             const min = parseFloat(r.min);
             const max = parseFloat(r.max);
-            
             if (!isNaN(val)) {
                 if(val < min) val = min;
                 if(val > max) val = max;
+                n.value = val;
                 r.value = val;
                 window.MetaStar?.update?.(param, val);
             }
         });
-
+        
         // Blur on Enter
         n.addEventListener('keydown', (e) => {
             if(e.key === 'Enter') n.blur();
         });
+
+        // --- 4. FIGMA SCRUBBER LOGIC ---
+        let startX, startVal, isScrubbing = false;
+
+        n.addEventListener('mousedown', (e) => {
+            if(e.button !== 0) return; // Only Left Click
+
+            startX = e.clientX;
+            startVal = parseFloat(n.value) || 0;
+            isScrubbing = false; 
+
+            window.addEventListener('mousemove', onScrubMove);
+            window.addEventListener('mouseup', onScrubEnd);
+        });
+
+        const onScrubMove = (e) => {
+            const delta = e.clientX - startX;
+
+            // Only start scrubbing if moved > 3px (prevents accidental scrubs on click)
+            if (!isScrubbing && Math.abs(delta) > 3) {
+                isScrubbing = true;
+                n.blur(); // Remove text focus
+                document.body.style.cursor = 'ew-resize'; // Global cursor override
+            }
+
+            if (isScrubbing) {
+                e.preventDefault();
+                
+                // Shift key = Precision Mode (0.1 increments)
+                const step = e.shiftKey ? 0.1 : 1; 
+                let newVal = startVal + (delta * step);
+                
+                // Clamp
+                const min = parseFloat(r.min);
+                const max = parseFloat(r.max);
+                if(newVal < min) newVal = min;
+                if(newVal > max) newVal = max;
+
+                // Rounding
+                newVal = e.shiftKey ? Math.round(newVal * 10) / 10 : Math.round(newVal);
+
+                // Update EVERYTHING
+                n.value = newVal;
+                r.value = newVal;
+                window.MetaStar?.update?.(param, newVal);
+            }
+        };
+
+        const onScrubEnd = () => {
+            isScrubbing = false;
+            document.body.style.cursor = '';
+            window.removeEventListener('mousemove', onScrubMove);
+            window.removeEventListener('mouseup', onScrubEnd);
+        };
     };
 
-    // Bind Geometry
-    sync('r-t', 'n-t', 'top');
-    sync('r-r', 'n-r', 'right');
-    sync('r-b', 'n-b', 'bottom');
-    sync('r-l', 'n-l', 'left');
+    // FIX: Use Short Codes ('t', 'r'...) to match core.js config
+    sync('r-t', 'n-t', 't');  // WAS 'top'
+    sync('r-r', 'n-r', 'r');  // WAS 'right'
+    sync('r-b', 'n-b', 'b');  // WAS 'bottom'
+    sync('r-l', 'n-l', 'l');  // WAS 'left'
 
     // Bind Transform
-    sync('r-sx', 'n-sx', 'skewX');
-    sync('r-sy', 'n-sy', 'skewY');
-    sync('r-c', 'n-c',  'curve');
+    sync('r-sx', 'n-sx', 'sx'); // WAS 'skewX'
+    sync('r-sy', 'n-sy', 'sy'); // WAS 'skewY'
+    sync('r-c', 'n-c',  'c');   // WAS 'curve'
 
     // Bind Colors
     const bindColor = (id, param) => {
@@ -378,9 +431,7 @@ let zoomState = { value: isMobileStart ? 15 : 60 };
 if(els.zoomVal) els.zoomVal.innerText = `${zoomState.value}%`;
 
 function handleZoom(delta) {
-    if (window.MetaStar && window.MetaStar.getZoom) {
-        zoomState.value = window.MetaStar.getZoom();
-    }
+    
     let targetZoom = zoomState.value + delta;
     if (targetZoom < 5) targetZoom = 5;
     if (targetZoom > 400) targetZoom = 400;
