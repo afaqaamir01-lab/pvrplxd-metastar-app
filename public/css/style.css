@@ -666,6 +666,11 @@ canvas { display: block; width: 100%; height: 100%; }
     
     .zoom-group { background: #111; border-color: #333; }
 
+    .pill-btn {
+        background: #050505;
+        -webkit-appearance: none;
+    }
+
     #sidebar { 
         position: fixed; top: auto; bottom: 0; left: 0; right: 0; 
         transform: translateY(calc(100% - 70px)); 
