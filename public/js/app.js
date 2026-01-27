@@ -18,15 +18,17 @@ const els = {
     // States
     stateIdentity: document.getElementById('state-identity'),
     stateScanning: document.getElementById('state-scanning'),
+    stateAuthenticated: document.getElementById('state-authenticated'), // NEW
     stateSuccess: document.getElementById('state-success'),
     statePurchase: document.getElementById('state-purchase'),
     stateTerminated: document.getElementById('state-terminated'),
     stateOtp: document.getElementById('state-otp'),
     stateResume: document.getElementById('state-resume'),
 
-    // Auth Inputs
+    // Auth Inputs & Displays
     emailInput: document.getElementById('email-input'),
     otpContainer: document.getElementById('otp-container'),
+    authCardEmail: document.getElementById('auth-card-email'), // NEW
 
     // Auth Buttons
     btnInit: document.getElementById('btn-init'),
@@ -205,34 +207,65 @@ async function initApp() {
     setupOtpInteractions();
     bindEvents();
     
-    // Resume Check
+    // CHECK 1: Do we have a token?
     if (msToken) {
         try {
+            // CHECK 2: Is this a Page Refresh? (Session Flag Exists)
+            // If ms_session_active exists in sessionStorage, the user just refreshed.
+            const isRefresh = sessionStorage.getItem("ms_session_active");
+
+            // Validate Token with Server
             const res = await fetch(`${API_URL}/auth/validate`, { method: 'POST', headers: getAuthHeaders() });
             const data = await res.json();
             
             if (data.valid) {
                 userEmail = data.email || "User";
-                UI.switchState('state-resume', 'RESTORING SESSION');
-                const emailEl = document.getElementById('resume-email');
-                if(emailEl) emailEl.innerText = userEmail;
-                const bar = document.getElementById('resume-bar');
-                if(bar) requestAnimationFrame(() => bar.style.width = "100%");
                 
-                setTimeout(unlockApp, 1200);
+                // === LOGIC SPLIT: FRESH VISIT vs REFRESH ===
+                if (!isRefresh) {
+                    // SCENARIO A: FRESH VISIT (New Tab/Window)
+                    // Show the Green Authenticated Card
+                    UI.intro(); // Ensure container fades in
+                    UI.switchState('state-authenticated', 'IDENTITY CONFIRMED');
+                    
+                    if(els.authCardEmail) els.authCardEmail.innerText = userEmail;
+
+                    // Set the Session Flag so next reload acts as a refresh
+                    sessionStorage.setItem("ms_session_active", "true");
+
+                    // Hold for a moment so user sees the card, then unlock
+                    setTimeout(unlockApp, 2500);
+                } else {
+                    // SCENARIO B: PAGE REFRESH
+                    // Skip the card, show minimal resume loader
+                    UI.switchState('state-resume', 'RESTORING SESSION');
+                    const emailEl = document.getElementById('resume-email');
+                    if(emailEl) emailEl.innerText = userEmail;
+                    
+                    const bar = document.getElementById('resume-bar');
+                    if(bar) requestAnimationFrame(() => bar.style.width = "100%");
+                    
+                    setTimeout(unlockApp, 800); // Faster unlock
+                }
                 return;
             } else {
+                // Token Invalid
                 localStorage.removeItem("ms_token");
                 msToken = null;
+                sessionStorage.removeItem("ms_session_active"); // Clear session flag
+                
                 if (data.code === "ACCESS_TERMINATED") {
                     UI.intro();
                     UI.switchState('state-terminated', 'ACCESS REVOKED');
                     return;
                 }
             }
-        } catch (e) { console.log("Session invalid"); }
+        } catch (e) { 
+            console.log("Session invalid or network error", e); 
+        }
     }
     
+    // No Token or Validation Failed -> Show Default Login
     UI.intro(); 
     UI.switchState('state-identity', 'SYSTEM READY');
 }
@@ -258,11 +291,12 @@ function loadProtectedCore() {
     .catch(e => {
         UI.showStatus("Session Expired. Reloading...", true);
         localStorage.removeItem("ms_token");
+        sessionStorage.removeItem("ms_session_active");
         setTimeout(() => window.location.reload(), 2000);
     });
 }
 
-// *** NEW: CONTROL BINDINGS (FIGMA STYLE) ***
+// *** CONTROL BINDINGS ***
 function initControls() {
     // Helper to sync Range Slider <-> Number Input
     const sync = (rangeId, numId, param) => {
@@ -336,33 +370,25 @@ function initControls() {
 
 // --- WORKSPACE TOOLS ---
 
-// FIX: Initialize with correct Responsive Zoom (15% Mobile, 60% Desktop)
+// Initialize with correct Responsive Zoom (15% Mobile, 60% Desktop)
 const isMobileStart = window.innerWidth < 768;
 let zoomState = { value: isMobileStart ? 15 : 60 }; 
 
-// FIX: Update UI immediately so it doesn't show 100% on load
+// Update UI immediately
 if(els.zoomVal) els.zoomVal.innerText = `${zoomState.value}%`;
 
 function handleZoom(delta) {
-    // 2. Calculate the target based on the current ANIMATED value
     let targetZoom = zoomState.value + delta;
-    
-    // 3. Clamp values (5% to 400%) - Updated min to 5% to support 15% default
     if (targetZoom < 5) targetZoom = 5;
     if (targetZoom > 400) targetZoom = 400;
     
-    // 4. Smooth Animation (The Morph Effect)
     gsap.to(zoomState, {
         value: targetZoom,
         duration: 0.5,        
         ease: "power2.out",   
         onUpdate: () => {
             const current = Math.round(zoomState.value);
-            
-            // Update UI Text
             if (els.zoomVal) els.zoomVal.innerText = `${current}%`;
-            
-            // Update Engine (Normalized 1.0 = 100%)
             window.MetaStar?.setZoom?.(zoomState.value / 100);
         }
     });
@@ -443,6 +469,10 @@ async function verifyOtp() {
         
         if (data.token) localStorage.setItem("ms_token", data.token);
         msToken = data.token;
+        
+        // Valid Login: Set the session flag so refreshed pages know we are active
+        sessionStorage.setItem("ms_session_active", "true");
+        
         unlockApp();
         
     } catch (e) { 
@@ -527,12 +557,9 @@ function bindEvents() {
         // Trigger Engine Reset
         window.MetaStar?.reset?.();
         
-        // FIX: Sync Local Zoom State to the same responsive defaults
+        // Sync Local Zoom State to the same responsive defaults
         const isMobileReset = window.innerWidth < 768;
         zoomState.value = isMobileReset ? 15 : 60;
-        
-        // Note: The UI text (els.zoomVal) will be updated by the engine's 
-        // onUpdate callback, so we don't need to force it here.
     };
 }
 
