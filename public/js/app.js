@@ -168,10 +168,18 @@ const UI = {
             edgeResistance: 0.65,
             dragClickables: false, 
             bounds: { minY: 0, maxY: 1000 }, 
+            
             onPress: function() {
                 const { closedY } = getSnapPoints();
                 this.applyBounds({ minY: 0, maxY: closedY });
             },
+            
+            // --- NEW CODE STARTS HERE ---
+            // Run this whenever the user drags or the sheet is animating
+            onDrag: function() { updateBadge(this.y); },
+            onThrowUpdate: function() { updateBadge(this.y); },
+            // --- NEW CODE ENDS HERE ---
+
             snap: {
                 y: function(value) {
                     const { openY, midY, closedY } = getSnapPoints();
@@ -185,6 +193,21 @@ const UI = {
                 }
             }
         });
+
+        // Helper function to toggle the badge
+        function updateBadge(currentY) {
+            const { closedY } = getSnapPoints();
+            const badge = document.getElementById('credit-badge'); // Make sure ID matches HTML
+            if (!badge) return;
+
+            // If the bar is pulled UP (currentY is less than closedY), hide badge
+            // We give it a small buffer (20px) so it doesn't flicker
+            if (currentY < closedY - 20) {
+                badge.classList.add('vanished');
+            } else {
+                badge.classList.remove('vanished');
+            }
+        }
     }
 };
 
